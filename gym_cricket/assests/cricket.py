@@ -1,7 +1,13 @@
 import pybullet as p
 import os
 import math
-
+'''
+TODO:
+ - fai una funzione privata che cerca nel urdf quali sono i joint dedicati alle ruote
+   e quali sono i joint dedicati ai movimenti delle braccia
+   
+ - finisci la funzione perform_action
+'''
 class Cricket:
     def __init__(self, client) -> None:
         self.client = client
@@ -41,7 +47,7 @@ class Cricket:
         # convert the quaternion (δ,Θ,ψ,ω) to Euler (δ,Θ,ψ)
         angs = p.getEulerFromQuaternion(ang) # roll, pitch, yaw
         ##ori = (math.cos(angs[2]), math.sin(angs[2])) # orientation
-        
+
         # Get the velocity of the robot
         l_vel, a_vel = p.getBaseVelocity(self.cricket, self.client) # linear & angular velocity
 

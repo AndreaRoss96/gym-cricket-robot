@@ -23,7 +23,23 @@ https://www.etedal.net/2020/04/pybullet-panda_2.html
 https://github.com/BarisYazici/deep-rl-grasping
 """
 
+
+'''
+TODO:
+Bro, qua di lavoro ce ne, io ti direi di ridaere una letta a quello che hai scritto
+perche' il ragazzone maggiolino fa il fenomeno ma compie movimenti in 2D
+
+Ad ogni modo dovrebbe essere tutto corretto dato che non abbiamo ancora lavorato a nessuna
+parte delicata del codice (aka lo step e forse il render), tu riguarda nel dubbio
+
+quindi mi concnetrerei sullo sviluppo dello step, che, in realta', dovrebbe anche considerare
+le reti neurali che dovresti implementare sooner or later
+'''
+
 class CricketEnv(gym.Env):
+    '''
+    Gym environment used by the cricket robot to train its self
+    '''
     metadata = {'render.modes': ['human']}
 
     def __init__(self):
