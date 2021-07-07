@@ -23,7 +23,7 @@ https://www.etedal.net/2020/04/pybullet-panda_2.html
 https://github.com/BarisYazici/deep-rl-grasping
 """
 
-class FooEnv(gym.Env):
+class CricketEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self):
