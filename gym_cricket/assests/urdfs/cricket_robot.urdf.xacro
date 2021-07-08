@@ -1,0 +1,820 @@
+<?xml version="1.0"?>
+<robot name="cricket_robot" xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+       xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+       xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
+       xmlns:xacro="http://playerstage.sourceforge.net/gazebo/xmlschema/#xacro">
+       <!-- xmlns:xacro="http://ros.org/wiki/xacro"> -->
+  
+  <xacro:property name="body_height" value="0.06"/>
+  <xacro:property name="body_length" value="0.41"/>
+  <xacro:property name="body_width" value="0.36"/>
+  <xacro:property name="track_length" value="0.25"/>
+  <xacro:property name="body_box_size" value="0.1"/>
+  <xacro:property name="pi" value="3.1415" />
+  <xacro:property name="cyl_rad" value="0.03" />
+  <!-- Leg values -->
+  <xacro:property name="shoulder" value="0.12" />
+  <xacro:property name="s_box" value="-0.05" />
+  <xacro:property name="s2_base" value="-0.015" />
+  <xacro:property name="s2_box" value="0.045" />
+  <xacro:property name="s2_base_box" value="-0.14"/>
+  <xacro:property name="k_box" value="-0.03" />
+  <xacro:property name="k_base_box" value="0.18" />
+  <xacro:property name="track" value="0.095" />
+
+
+  <material name="yellow">
+    <color rgba="0.8 0.8 0 1"/>
+  </material>
+
+  <material name="red">
+    <color rgba="1 0 0 1"/>
+  </material>
+
+  <xacro:macro name="default_inertial" params="mass">
+    <inertial>
+      <mass value="${mass}" />
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0" />
+    </inertial>
+  </xacro:macro>
+
+  <!-- main body -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="${body_length} ${body_width} ${body_height}"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${body_length} ${body_width} ${body_height}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="dummy_link">
+    <visual name="">
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <box size="${body_length} ${body_width} ${body_height}"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <box size="0.0 0.0 0.0"/>
+      </geometry>
+    </collision>
+    <xacro:default_inertial mass="10"/>
+  </link>
+
+  <joint name="dummy_joint" type="fixed">
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+    <parent link="base_link"/>
+    <child link="dummy_link"/>
+    <axis xyz="0.0 0.0 0.0"/>
+  </joint>
+
+  <!-- ###################### -->
+  <!-- #####  BODY  BOX ##### -->
+  <!-- ###################### -->
+
+  <xacro:macro name="body_box" params="body_side origin_bb origin_bc">
+    <link name="${body_side}_box">
+      <visual>
+        <geometry>
+            <box size="${body_box_size} 0.04 ${body_height}"/>
+        </geometry>
+        <material name="red"/>
+      </visual>
+      <collision>
+        <geometry>
+            <box size="${body_box_size} 0.04 ${body_height}"/> 
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="body_to_${body_side}_box" type="fixed">
+      <parent link="base_link"/>
+      <child link="${body_side}_box"/>
+      <origin xyz="0.0 ${origin_bb} 0.0"/>
+    </joint>
+
+    <link name="${body_side}_cylinder">
+      <visual name="${body_side}_cylinder">
+        <origin rpy="0 ${pi/2} 0" xyz="0 0.0 0"/>
+        <geometry>
+          <cylinder radius="${cyl_rad}" length="0.1"/>
+        </geometry>
+        <material name="red"/>
+      </visual>
+      <collision>
+        <origin rpy="0 ${pi/2} 0" xyz="0 0.0 0"/>
+        <geometry>
+          <cylinder radius="${cyl_rad}" length="0.1"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="0.5"/>
+    </link>
+
+    <joint name="${body_side}_box_to_cylinder" type="fixed">
+      <parent link="${body_side}_box"/>
+      <child link="${body_side}_cylinder"/>	 
+      <origin xyz="0.0 ${origin_bc} 0.0" rpy="0.0 0.0 0.0"/>
+    </joint>
+
+  </xacro:macro>
+
+  <xacro:body_box body_side="right" origin_bb="0.2" origin_bc="0.02"/>
+  <xacro:body_box body_side="left" origin_bb="-0.2" origin_bc="-0.02"/>
+
+  <!-- ###################### -->
+  <!-- ##### RIGHT LEGS ##### -->
+  <!-- ###################### -->
+
+  <!-- <xacro:macro name="right_leg" params="body_side shoulder s_box s2_base s2_box s2_base_box k_box k_base_box track rpy_track"> -->
+  <xacro:macro name="right_leg" params="body_side rev rpy_track">
+    <!-- SHOULDER 1 -->
+    <link name="r_${body_side}_shoulder_cylinder">
+      <visual name="r_${body_side}_shoulder_cylinder">
+        <origin rpy="0 ${pi/2} 0" xyz="0.0 0.0 0"/>
+        <geometry>
+          <cylinder radius="${cyl_rad}" length="0.12"/>
+        </geometry>   
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin rpy="0 ${pi/2} 0" xyz="0.0 0.0 0"/>
+        <geometry>
+          <cylinder radius="${cyl_rad}" length="0.12"/>
+        </geometry>  
+      </collision>
+      <xacro:default_inertial mass="0.5"/>
+    </link>
+
+    <joint name="r_${body_side}_shoulder_to_body" type="revolute">
+      <axis xyz="1 0.0 0.0"/>
+      <limit effort="1000.0" lower="-1.57075" upper="1.57075" velocity="0.5"/>
+      <origin xyz="${rev*shoulder} 0.0 0.0" rpy="0 0 0.0"/>
+      <parent link="right_cylinder"/>
+      <child link="r_${body_side}_shoulder_cylinder"/>
+      <limit effort="30" velocity="1.0"/>
+      <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+
+    <transmission name="r_${body_side}_shoulder_to_body_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="${body_side}_r_shoulder_to_body_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="r_${body_side}_shoulder_to_body">
+        <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+      </joint>
+    </transmission>
+    
+    <link name="r_${body_side}_shoulder_box">
+      <visual name="r_${body_side}_shoulder_box">
+        <origin rpy="0 0 0" xyz="${rev*s_box} -0.0005 0"/>
+        <geometry>
+          <box size="0.12 0.03 0.06"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz="${rev*s_box} -0.0005 0"/>
+        <geometry>
+          <box size="0.12 0.03 0.06"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="3.5"/>
+    </link>
+
+    <joint name="r_${body_side}_shoulder_cyl_to_box" type="fixed">
+      <origin xyz="${- rev * s_box} 0.017 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="r_${body_side}_shoulder_cylinder"/>
+      <child link="r_${body_side}_shoulder_box"/>
+    </joint>
+
+    <!-- SHOULDER 2 -->
+    <link name="r_${body_side}_shoulder2_base">
+      <visual name="r_${body_side}_shoulder2_base">
+        <origin xyz="${rev*s2_base} 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.05 0.01 0.06"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="${rev*s2_base} 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.05 0.01 0.06"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="0.5"/>
+    </link>
+
+    <joint name="r_${body_side}_shoulder2_to_shoulder" type="continuous">
+      <axis xyz="0.0 1 0.0"/>
+      <origin xyz="0.0 0.02 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="r_${body_side}_shoulder_box"/>
+      <child link="r_${body_side}_shoulder2_base"/>
+      <limit effort="30" velocity="1.0"/>
+      <dynamics damping="0.0" friction="0.0"/>      
+    </joint>
+    
+    <transmission name="r_${body_side}_shoulder2_to_shoulder_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="${body_side}_$_shoulder2_to_shoulder_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="r_${body_side}_shoulder2_to_shoulder">
+        <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+      </joint>
+    </transmission>
+
+    <link name="r_${body_side}_shoulder2_box">
+      <visual name="r_${body_side}_shoulder2_box">
+        <origin xyz="${rev*s2_box} 0.02 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.11 0.05 0.06"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="${rev*s2_box} 0.02 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.11 0.05 0.06"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="3"/>
+    </link>
+
+    <joint name="r_${body_side}_shoulder2_base_to_box" type="fixed">
+      <origin xyz="${rev*s2_base_box} 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="r_${body_side}_shoulder2_base"/>
+      <child link="r_${body_side}_shoulder2_box"/>
+    </joint>
+
+    <!-- KNEE -->
+    <link name="r_${body_side}_knee_base">
+      <visual name="r_${body_side}_knee_base">
+        <origin xyz="${-rev * s_box} 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.12 0.01 0.06"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="${-rev * s_box} 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.12 0.01 0.06"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="0.5"/>
+    </link>
+
+    <joint name="r_${body_side}_shoulder2_to_knee" type="continuous">
+      <axis xyz="0.0 1 0.0"/>
+      <origin xyz="0.0 0.052 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="r_${body_side}_shoulder2_box"/>
+      <child link="r_${body_side}_knee_base"/>
+      <limit effort="30" velocity="1.0"/>
+      <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+
+    <transmission name="r_${body_side}_shoulder2_to_knee_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="${body_side}_r_shoulder2_to_knee_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="r_${body_side}_shoulder2_to_knee">
+        <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+      </joint>
+    </transmission>
+
+    <link name="r_${body_side}_knee_box">
+      <visual name="r_${body_side}_knee_box">
+        <origin xyz="${rev*k_box} -0.02 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.08 0.05 0.06"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="${rev*k_box} -0.02 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.08 0.05 0.06"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="3.5"/>
+    </link>
+
+    <joint name="r_${body_side}_knee_base_to_box" type="fixed">
+      <origin xyz="${rev*k_base_box} 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="r_${body_side}_knee_base"/>
+      <child link="r_${body_side}_knee_box"/>
+    </joint>
+
+    <!-- ANKLE & TRACK -->
+    <link name="r_${body_side}_jointed_track">
+      <visual name="r_${body_side}_jointed_track">
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 1.57075 1.57075"/>
+        <geometry>
+          <cylinder radius="${cyl_rad - cyl_rad/2}" length="0.05"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 1.57075 1.57075"/>
+        <geometry>
+          <cylinder radius="${cyl_rad - cyl_rad/2}" length="0.05"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="0.5"/>
+    </link>
+
+    <joint name="r_${body_side}_ankle" type="continuous">
+      <axis xyz="0.0 1 0.0"/>
+      <origin xyz="0.0 0.032 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="r_${body_side}_knee_box"/>
+      <child link="r_${body_side}_jointed_track"/>
+      <limit effort="30" velocity="1.0"/>
+      <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+
+    <transmission name="r_${body_side}_ankle_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="${body_side}_r_ankle_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="r_${body_side}_ankle">
+        <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+      </joint>
+    </transmission>
+
+    <!--wheels-->
+    <link name="r_${body_side}_starts_track">
+      <visual name="r_${body_side}_starts_track">
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 1.57075 1.57075"/>
+        <geometry>
+          <cylinder radius="${cyl_rad}" length="0.05"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 1.57075 1.57075"/>
+        <geometry>
+          <cylinder radius="${cyl_rad}" length="0.05"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="0.5"/>
+    </link>
+
+    <joint name="r_${body_side}_begin_track_joint" type="continuous">
+      <axis xyz="0.0 1 0.0"/>
+      <origin xyz="0.0 0 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="r_${body_side}_jointed_track"/>
+      <child link="r_${body_side}_starts_track"/>
+    </joint>
+
+    <transmission name="r_${body_side}_begin_track_joint_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="${body_side}_r_begin_track_joint_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="r_${body_side}_begin_track_joint">
+        <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+      </joint>
+    </transmission>
+
+    <gazebo reference="r_${body_side}_starts_track">
+      <mu1 value="200.0"/>
+      <mu2 value="100.0"/>
+      <kp value="10000000.0" />
+      <kd value="1.0" />
+      <material>Gazebo/Grey</material>
+    </gazebo>
+
+    <link name="r_${body_side}_track"> <!-- Between the two wheels -->
+      <visual name="r_${body_side}_track">
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.190 0.04 0.06"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.190 0.04 0.06"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="4"/>
+    </link>
+
+    <joint name="r_${body_side}_jointed_track_to_track" type="fixed">
+      <origin xyz="0.095 0.0 0.0" rpy="0.0 ${rpy_track} 0.0"/>
+      <parent link="r_${body_side}_jointed_track"/>
+      <child link="r_${body_side}_track"/>
+    </joint>
+
+    <link name="r_${body_side}_ends_track">
+      <visual name="r_${body_side}_ends_track">
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 1.57075 1.57075"/>
+        <geometry>
+          <cylinder radius="${cyl_rad}" length="0.05"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 1.57075 1.57075"/>
+        <geometry>
+          <cylinder radius="${cyl_rad}" length="0.05"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="0.5"/>
+    </link>
+
+    <joint name="r_${body_side}_final_track_joint" type="continuous">
+      <axis xyz="0.0 1 0.0"/>
+      <origin xyz="${rev*track} 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="r_${body_side}_track"/>
+      <child link="r_${body_side}_ends_track"/>
+      <limit effort="30" velocity="1.0"/>
+      <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+
+    <transmission name="r_${body_side}_final_track_joint_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="${body_side}_r_final_track_joint_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="r_${body_side}_final_track_joint">
+        <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+      </joint>
+    </transmission>
+
+    <gazebo reference="r_${body_side}_ends_track">
+      <mu1 value="200.0"/>
+      <mu2 value="100.0"/>
+      <kp value="10000000.0" />
+      <kd value="1.0" />
+      <material>Gazebo/Grey</material>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- <xacro:right_leg body_side="front" shoulder="0.12" s_box="0.05" s2_base="-0.015" s2_box="0.045" s2_base_box="-0.14" k_box="-0.03" k_base_box="0.18" track="0.095" rpy_track="0.0"/>
+  <xacro:right_leg body_side="back" shoulder="-0.12" s_box="0.05" s2_base="0.015" s2_box="-0.045" s2_base_box="0.14" k_box="0.03" k_base_box="-0.18" track="-0.095" rpy_track="3.1415"/> -->
+  <xacro:right_leg body_side="front" rev="1" rpy_track="0.0"/>
+  <xacro:right_leg body_side="back" rev="-1" rpy_track="3.1415"/>
+
+
+
+  <!-- ###################### -->
+  <!-- ##### LEFT LEGS ###### -->
+  <!-- ###################### -->
+
+  <!-- <xacro:macro name="left_leg" params="body_side shoulder s_box s2_base s2_box s2_base_box k_box k_base_box track rpy_track"> -->
+  <xacro:macro name="left_leg" params="body_side rev rpy_track">
+    <!-- SHOULDER 1 -->
+    <link name="l_${body_side}_shoulder_cylinder">
+      <visual name="l_${body_side}_shoulder_cylinder">
+        <origin rpy="0 ${pi/2} 0" xyz="0.0 0.0 0"/>
+        <geometry>
+          <cylinder radius="${cyl_rad}" length="0.12"/>
+        </geometry>   
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin rpy="0 ${pi/2} 0" xyz="0.0 0.0 0"/>
+        <geometry>
+          <cylinder radius="${cyl_rad}" length="0.12"/>
+        </geometry>  
+      </collision>
+      <xacro:default_inertial mass="3.5"/>
+    </link>
+
+    <joint name="l_${body_side}_shoulder_to_body" type="revolute">
+      <axis xyz="1 0.0 0.0"/>
+      <limit effort="1000.0" lower="-1.57075" upper="1.57075" velocity="0.5"/>
+      <origin xyz="${rev*shoulder} 0.0 0.0" rpy="0 0 0.0"/>
+      <parent link="left_cylinder"/>
+      <child link="l_${body_side}_shoulder_cylinder"/>
+      <limit effort="30" velocity="1.0"/>
+    </joint>
+
+    <transmission name="l_${body_side}_shoulder_to_body_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="${body_side}_l_shoulder_to_body_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="l_${body_side}_shoulder_to_body">
+        <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+      </joint>
+    </transmission>
+    
+    <link name="l_${body_side}_shoulder_box">
+      <visual name="l_${body_side}_shoulder_box">
+        <origin rpy="0 0 0" xyz=" ${rev*s_box} 0.0005 0"/>
+        <geometry>
+          <box size="0.12 0.03 0.06"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz=" ${rev*s_box} 0.0005 0"/>
+        <geometry>
+          <box size="0.12 0.03 0.06"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="0.5"/>
+    </link>
+
+    <joint name="l_${body_side}_shoulder_cyl_to_box" type="fixed">
+      <origin xyz="${- rev*s_box} -0.017 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="l_${body_side}_shoulder_cylinder"/>
+      <child link="l_${body_side}_shoulder_box"/>
+    </joint>
+
+    <!-- SHOULDER 2  -->
+    <link name="l_${body_side}_shoulder2_base">
+      <visual name="l_${body_side}_shoulder2_base">
+        <origin xyz="${rev*s2_base} 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.05 0.01 0.06"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="${rev*s2_base} 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.05 0.01 0.06"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="0.5"/>
+    </link>
+
+    <joint name="l_${body_side}_shoulder2_to_shoulder" type="continuous">
+      <axis xyz="0.0 1 0.0"/>
+      <origin xyz="0.0 -0.02 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="l_${body_side}_shoulder_box"/>
+      <child link="l_${body_side}_shoulder2_base"/>
+      <limit effort="30" velocity="1.0"/>
+      <dynamics damping="0.0" friction="0.0"/>
+    </joint>
+
+    <transmission name="l_${body_side}_shoulder2_to_shoulder_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="${body_side}_l_shoulder2_to_shoulder_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="l_${body_side}_shoulder2_to_shoulder">
+        <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+      </joint>
+    </transmission>
+
+    <link name="l_${body_side}_shoulder2_box">
+      <visual name="l_${body_side}_shoulder2_box">
+        <origin xyz="${rev*s2_box} -0.02 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.11 0.05 0.06"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="${rev*s2_box} -0.02 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.11 0.05 0.06"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="3"/>
+    </link>
+
+    <joint name="l_${body_side}_shoulder2_base_to_box" type="fixed">
+      <origin xyz="${rev*s2_base_box} 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="l_${body_side}_shoulder2_base"/>
+      <child link="l_${body_side}_shoulder2_box"/>
+    </joint>
+
+    <!-- KNEE -->
+    <link name="l_${body_side}_knee_base">
+      <visual name="l_${body_side}_knee_base">
+        <origin xyz="${-rev*s_box} 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.12 0.01 0.06"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="${-rev*s_box} 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.12 0.01 0.06"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="4"/>
+    </link>
+
+    <joint name="l_${body_side}_shoulder2_to_knee" type="continuous">
+      <axis xyz="0.0 1 0.0"/>
+      <origin xyz="0.0 -0.052 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="l_${body_side}_shoulder2_box"/>
+      <child link="l_${body_side}_knee_base"/>
+    </joint>
+
+    <transmission name="l_${body_side}_shoulder2_to_knee_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="${body_side}_l_shoulder2_to_knee_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="l_${body_side}_shoulder2_to_knee">
+        <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+      </joint>
+    </transmission>
+
+    <link name="l_${body_side}_knee_box">
+      <visual name="l_${body_side}_knee_box">
+        <origin xyz="${rev*k_box} 0.02 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.08 0.05 0.06"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="${rev*k_box} 0.02 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.08 0.05 0.06"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="0.5"/>
+    </link>
+
+    <joint name="l_${body_side}_knee_base_to_box" type="fixed">
+      <origin xyz="${rev*k_base_box} 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="l_${body_side}_knee_base"/>
+      <child link="l_${body_side}_knee_box"/>
+    </joint>
+
+    <!-- ANKLE & TRACK -->
+    <link name="l_${body_side}_jointed_track">
+      <visual name="l_${body_side}_jointed_track">
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 1.57075 1.57075"/>
+        <geometry>
+          <cylinder radius="${cyl_rad - cyl_rad/2}" length="0.05"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 1.57075 1.57075"/>
+        <geometry>
+          <cylinder radius="${cyl_rad - cyl_rad/2}" length="0.05"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="0.5"/>
+    </link>
+
+    <joint name="l_${body_side}_ankle" type="continuous"> <!--For the movement of the whole track-->
+      <axis xyz="0.0 1 0.0"/>
+      <origin xyz="0.0 -0.032 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="l_${body_side}_knee_box"/>
+      <child link="l_${body_side}_jointed_track"/>
+    </joint>
+
+    <transmission name="l_${body_side}_ankle_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="${body_side}_l_ankle_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="l_${body_side}_ankle">
+        <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+      </joint>
+    </transmission>
+
+    <!--wheels-->
+    <link name="l_${body_side}_starts_track">
+      <visual name="l_${body_side}_starts_track">
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 1.57075 1.57075"/>
+        <geometry>
+          <cylinder radius="${cyl_rad}" length="0.05"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 1.57075 1.57075"/>
+        <geometry>
+          <cylinder radius="${cyl_rad}" length="0.05"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="0.5"/>
+    </link>
+
+    <joint name="l_${body_side}_begin_track_joint" type="continuous">
+      <axis xyz="0.0 1 0.0"/>
+      <origin xyz="0.0 0 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="l_${body_side}_jointed_track"/>
+      <child link="l_${body_side}_starts_track"/>
+    </joint>
+
+    <transmission name="l_${body_side}_begin_track_joint_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="${body_side}_l_begin_track_joint_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="l_${body_side}_begin_track_joint">
+        <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+      </joint>
+    </transmission>
+
+    <gazebo reference="l_${body_side}_starts_track">
+      <mu1 value="200.0"/>
+      <mu2 value="100.0"/>
+      <kp value="10000000.0" />
+      <kd value="1.0" />
+      <material>Gazebo/Grey</material>
+    </gazebo>
+
+    <link name="l_${body_side}_track"> <!-- Between the two wheels -->
+      <visual name="l_${body_side}_track">
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.190 0.04 0.06"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <box size="0.190 0.04 0.06"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="4.5"/>
+    </link>
+
+    <joint name="l_${body_side}_jointed_track_to_track" type="fixed">
+      <origin xyz="0.095 0.0 0.0" rpy="0.0 ${rpy_track} 0.0"/>
+      <parent link="l_${body_side}_jointed_track"/>
+      <child link="l_${body_side}_track"/>
+    </joint>
+
+    <link name="l_${body_side}_ends_track">
+      <visual name="l_${body_side}_ends_track">
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 1.57075 1.57075"/>
+        <geometry>
+          <cylinder radius="${cyl_rad}" length="0.05"/>
+        </geometry>
+        <material name="yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="0.0 0.0 0.0" rpy="0.0 1.57075 1.57075"/>
+        <geometry>
+          <cylinder radius="${cyl_rad}" length="0.05"/>
+        </geometry>
+      </collision>
+      <xacro:default_inertial mass="0.5"/>
+    </link>
+
+    <joint name="l_${body_side}_final_track_joint" type="continuous">
+      <axis xyz="0.0 1 0.0"/>
+      <origin xyz="${rev*track} 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <parent link="l_${body_side}_track"/>
+      <child link="l_${body_side}_ends_track"/>
+    </joint>
+
+    <transmission name="l_${body_side}_final_track_joint_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <actuator name="${body_side}_l_final_track_joint_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+      <joint name="l_${body_side}_final_track_joint">
+        <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+        <!-- <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface> -->
+      </joint>
+    </transmission>
+
+    <gazebo reference="l_${body_side}_ends_track">
+      <mu1 value="200.0"/>
+      <mu2 value="100.0"/>
+      <kp value="10000000.0" />
+      <kd value="1.0" />
+      <material>Gazebo/Grey</material>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- 
+  <xacro:left_leg body_side="front" shoulder="0.12" s_box="-0.05" s2_base="-0.015" s2_box="0.045" s2_base_box="-0.14" k_box="-0.03" k_base_box="0.18" track="0.095" rpy_track="0.0"/>
+  <xacro:left_leg body_side="back" shoulder="-0.12" s_box="0.05" s2_base="0.015" s2_box="-0.045" s2_base_box="0.14" k_box="0.03" k_base_box="-0.18" track="-0.095" rpy_track="3.1415"/>
+  -->
+  <xacro:left_leg body_side="front" rev="1" rpy_track="0.0"/>
+  <xacro:left_leg body_side="back" rev="-1" rpy_track="3.1415"/> 
+
+
+  <!-- Gazebo plugin for ROS Control -->
+  <gazebo>
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+      <robotNamespace>/cricket</robotNamespace>
+      <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+    </plugin>
+  </gazebo>
+
+</robot>

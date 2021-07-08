@@ -26,9 +26,11 @@ number_of_joints = p.getNumJoints(robot_id) # 41
 print('*'*80)
 print(number_of_joints)
 for joint_number in range(number_of_joints):
-    print("*"*80)
+    #print("*"*80)
     info = p.getJointInfo(robot_id, joint_number)
-    print(info)
+    #print(info[1:3])
+
+robot.print_info()
 
 # for _ in range(300000): 
 #     pos, ori = p.getBasePositionAndOrientation(robot)

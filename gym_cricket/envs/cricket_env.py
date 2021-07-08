@@ -38,7 +38,7 @@ le reti neurali che dovresti implementare sooner or later
 
 class CricketEnv(gym.Env):
     '''
-    Gym environment used by the cricket robot to train its self
+    Gym environment used by the cricket robot to train it self
     '''
     metadata = {'render.modes': ['human']}
 
