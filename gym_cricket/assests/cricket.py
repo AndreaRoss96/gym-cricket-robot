@@ -43,7 +43,14 @@ class Cricket:
         '''
         The action passed to the robot are the angles of the joints and the rotation of
         the wheel tracks
+
+        Domanda: should I need to add the acceleration of the tortion as well?
+
+        action:
+            0-3 the value of the tracks movement
+            4... the tortion of all the other joints
         '''
+        action[]
 
     def get_observations(self):
         '''Return:
@@ -81,3 +88,31 @@ class Cricket:
             print(f'{count} - {joint}')
             print('-'*times)
         print('='*times)
+
+"""
+USEFUL DOC:
+
+setJointMotorControlArray:
+[
+    required - bodyUniqueId - int body unique id as returned from loadURDF etc.
+    required - jointIndices - list of int index in range [0..getNumJoints(bodyUniqueId) (note that link index == joint index)
+    required - controlMode - int POSITION_CONTROL, VELOCITY_CONTROL,
+                                    TORQUE_CONTROL, PD_CONTROL. (There is also
+                                    experimental STABLE_PD_CONTROL for stable(implicit) PD
+                                    control, which requires additional preparation. See
+                                    humanoidMotionCapture.py and pybullet_envs.deep_mimc for
+                                    STABLE_PD_CONTROL examples.)
+    optional - targetPositions - list of float in POSITION_CONTROL the targetValue is target position of
+the joint
+    optional - targetVelocities - list of float in PD_CONTROL, VELOCITY_CONTROL and
+POSITION_CONTROL the targetValue is target velocity of the
+joint, see implementation note below.
+    optional - forces - list of float in PD_CONTROL, POSITION_CONTROL and
+VELOCITY_CONTROL this is the maximum motor force used to
+reach the target value. In TORQUE_CONTROL this is the
+force/torque to be applied each simulation step.
+    optional - positionGains - list of float See implementation note below
+    optional - velocityGains - list of float See implementation note below
+    optional - physicsClientId - int if you are connected to multiple servers, you can pick one. 
+]
+"""
