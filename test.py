@@ -52,6 +52,17 @@ while True:
                                 p.POSITION_CONTROL, 
                                 targetPosition=user_angle)
     counter +=1
-    if counter % 10000 == 0 :
-        print(f'observation: {robot.get_observations()}')
+
+    #print(f'observation: {robot.get_observations()}')
+    #print(p.getJointInfo(robot_id, robot.limb_joints[1][0]))
+    robot.perform_action([1.57,0.7])
+    time.sleep(1.)
     p.stepSimulation()
+
+# #print(f'observation: {robot.get_observations()}')
+# print(p.getJointInfo(robot_id, robot.limb_joints[1][0]))
+# #robot.perform_action([1.57,0.7])
+# ori = p.getQuaternionFromEuler([3.14,0.,0.])
+# targetPosJoints = p.calculateInverseKinematics(robot_id, 7, [0.9,0.1,1.6], targetOrientation = ori)
+# print(f'targetjointpos {targetPosJoints}')
+# p.setJointMotorControlArray(robot_id, range(24), p.POSITION_CONTROL, targetPositions = targetPosJoints)

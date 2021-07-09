@@ -12,7 +12,7 @@ class Cricket:
         self.cricket = p.loadURDF(fileName = f_name,
                                   basePosition = [0,0,0.1],
                                   physicsClientId=client)
-        self.track_joints = [] # joints related to the tracks
+        self.track_joints = [] # joints related to the tracks --> list of lists
         self.limb_joints = [] # all the other non-fixed joints (knees, shoulders, and so on)
         self.__find_joints() # completes the above joint lists 
         # Joint speed
@@ -24,6 +24,7 @@ class Cricket:
         self.c_throttle = 20
 
     def __find_joints(self):
+        '''Completes the joints in the cricket robot'''
         number_of_joints = p.getNumJoints(self.cricket)
         track = []
         for joint_number in range(number_of_joints):
@@ -50,7 +51,20 @@ class Cricket:
             0-3 the value of the tracks movement
             4... the tortion of all the other joints
         '''
-        action[]
+
+        """
+        SOLUZZIONE PROPOSTA:
+        Si performa un'azione per uno specifico time stemp (like frame to frame),
+        Quando il tempo termina, si valutano i risultati (reward, reti and so on), e si genera una nuova azione
+        """
+        p.setJointMotorControlArray(
+            self.cricket,
+            jointIndices = [3,5],
+            controlMode = p.POSITION_CONTROL,
+            targetPositions = [action[0], action[1]],
+            physicsClientId = self.client
+            )
+        #action[]
 
     def get_observations(self):
         '''Return:
@@ -84,9 +98,13 @@ class Cricket:
         for count, track in enumerate(self.track_joints):
             print(f'{count} - {track}')
             print('-'*times)
+        print('_'*times)
+        print('limb joints: ')
         for count, joint in enumerate(self.limb_joints):
             print(f'{count} - {joint}')
             print('-'*times)
+        print('_'*times)
+        print('Link states')
         print('='*times)
 
 """
@@ -103,16 +121,23 @@ setJointMotorControlArray:
                                     humanoidMotionCapture.py and pybullet_envs.deep_mimc for
                                     STABLE_PD_CONTROL examples.)
     optional - targetPositions - list of float in POSITION_CONTROL the targetValue is target position of
-the joint
+                                    the joint
     optional - targetVelocities - list of float in PD_CONTROL, VELOCITY_CONTROL and
-POSITION_CONTROL the targetValue is target velocity of the
-joint, see implementation note below.
+                                    POSITION_CONTROL the targetValue is target velocity of the
+                                    joint, see implementation note below.
     optional - forces - list of float in PD_CONTROL, POSITION_CONTROL and
-VELOCITY_CONTROL this is the maximum motor force used to
-reach the target value. In TORQUE_CONTROL this is the
-force/torque to be applied each simulation step.
+                            VELOCITY_CONTROL this is the maximum motor force used to
+                            reach the target value. In TORQUE_CONTROL this is the
+                            force/torque to be applied each simulation step.
     optional - positionGains - list of float See implementation note below
     optional - velocityGains - list of float See implementation note below
     optional - physicsClientId - int if you are connected to multiple servers, you can pick one. 
 ]
+______________________________________________________________________________________________________
+
+-------------------------------------------------------------------------
+method          | implementation    | component                         |
+-------------------------------------------------------------------------
+POSITION_CONTROL| constraint        | velocity and position constraint  | error = position_gain*(desired_position-actual_position)+velocity_gain*(desired_velocity-actual_velocity)
+VELOCITY_CONTROL| constraint        | pure velocity constraint          | error = desired_velocity - actual_velocity
 """
