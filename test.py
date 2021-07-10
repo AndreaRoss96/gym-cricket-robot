@@ -40,6 +40,8 @@ robot.print_info()
 wheel_indices = [1, 3, 4, 5,6,7,8,9]
 hinge_indices = [0, 2]
 counter = 0
+flag = True
+mvm = 0
 while True:
     user_angle = p.readUserDebugParameter(angle)
     user_throttle = p.readUserDebugParameter(throttle)
@@ -47,16 +49,35 @@ while True:
         p.setJointMotorControl2(robot_id, joint_index,
                                 p.VELOCITY_CONTROL,
                                 targetVelocity=user_throttle)
-    for joint_index in hinge_indices:
+    for joint_index in wheel_indices:
         p.setJointMotorControl2(robot_id, joint_index,
                                 p.POSITION_CONTROL, 
                                 targetPosition=user_angle)
     counter +=1
 
     #print(f'observation: {robot.get_observations()}')
-    #print(p.getJointInfo(robot_id, robot.limb_joints[1][0]))
-    robot.perform_action([1.57,0.7])
-    time.sleep(1.)
+    print(f"{counter}: state joints")
+    print(f'limb 0: {p.getJointState(robot_id, 10)}')
+    print(f'limb 1: {p.getJointState(robot_id, robot.limb_joints[1][0])}')
+    mvm += 0.5
+    action_1 = np.array(
+        [
+            [mvm,0.5],
+            [0.0,0.1],
+            [0.0,0.0]
+        ]
+    )
+    if flag :
+        robot.perform_action(action_1)
+        if p.getJointState(robot_id, robot.limb_joints[0][0])[0] > 1.566:
+            print("**"*100)
+            flag = False
+    else :
+        robot.perform_action([1.57,0])
+        # if p.getJointState(robot_id, robot.limb_joints[0][0])[0] < -1.566 :
+        #     break
+
+    time.sleep(1./10.)
     p.stepSimulation()
 
 # #print(f'observation: {robot.get_observations()}')
