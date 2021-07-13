@@ -65,7 +65,8 @@ class CricketEnv(gym.Env):
 
 
     def step(self, action):
-    ...
+        pass
+    
     def reset(self):
         ''' This function is used to reset the PyBullet environment '''
         self.step_counter = 0
