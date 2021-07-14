@@ -65,6 +65,13 @@ class CricketEnv(gym.Env):
 
 
     def step(self, action):
+        """
+        To return:
+         - reward
+         - new_state
+         - done (True/False)
+         - info : string
+        """
         pass
     
     def reset(self):
