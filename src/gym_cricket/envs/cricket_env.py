@@ -107,6 +107,7 @@ class CricketEnv(gym.Env):
     def render(self, mode='human'):
         # che fa render?
     ...
+
     def close(self):
     ...
 

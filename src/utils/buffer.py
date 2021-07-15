@@ -4,6 +4,13 @@ import numpy as np
 from collections import deque
 
 class Buffer:
+    """
+    DDPG nuses a replay buffer to sample experience to update neural network parameters.
+    during each trajectory roll-out, the transation (s,a,r,s+t) is stored in a fined size cahce.
+
+    By sampling random mini-batches from the buffer we can update
+    the Qvalues and the policy networks.
+    """
 
     def __init__(self, max_size):
         self.max_size = max_size

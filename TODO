@@ -1,0 +1,14 @@
+CricketEnv:
+ - riguarda il constructor, particularly hte action_space and observation_space
+ - implement the step (vd sotto)
+ - give a look to the method reset()
+ - implmement (copia) render
+ - implement (copia) close
+
+Goal:
+ - in order to compute the reward function, we need to implement tha class GOAL,
+   which can be represented as another class Cricket (not environment) with a certain
+   angle for the joints
+
+Neural Networks:
+ - need to implement both the actor and critic Networks
