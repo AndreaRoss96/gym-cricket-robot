@@ -8,7 +8,8 @@ import pybullet_data
 import math
 import numpy as np
 import random
-
+from gym_cricket.assests.goal import Goal
+from gym_cricket.assests.cricket import Cricket
 """
 Blog interessanti da cui attingere conoscienza:
 - Simple driving car
@@ -54,12 +55,14 @@ class CricketEnv(gym.Env):
             cameraPitch=-40,
             cameraTargetPosition=[0.55,-0.35,0.2])
         # Let's describe the format of valid actions and observations.
-        self.action_space = spaces.Box(
-            low=np.array([0, -.6], dtype=np.float32),
-            high=np.array([1, .6], dtype=np.float32))
         self.observation_space = spaces.Box(
+            # modifica con i dati delle rotazioni e della forza normale
             low=np.array([-10, -10, -1, -1, -5, -5, -10, -10], dtype=np.float32),
             high=np.array([10, 10, 1, 1, 5, 5, 10, 10], dtype=np.float32))
+        self.action_space = spaces.Box(
+            # modifica con gli intervalli delle torsioni dei joint e delle track
+            low=np.array([0, -.6], dtype=np.float32),
+            high=np.array([1, .6], dtype=np.float32))
         self.np_random, _ = gym.utils.seeding.np_random()
         self.reset()
 
@@ -72,6 +75,10 @@ class CricketEnv(gym.Env):
          - done (True/False)
          - info : string
         """
+        p.configureDebugVisualizer(p.COV_ENABLE_SINGLE_STEP_RENDERING)
+        pos,angs,l_vel,a_vel = self.cricket.get_observations()
+        
+
         pass
     
     def reset(self):
@@ -82,6 +89,7 @@ class CricketEnv(gym.Env):
         urdfRootPath=pybullet_data.getDataPath()
         p.setGravity(0,0,-10)
 
+        # Plane: to chose the plane I can do a script that changes the path to the desired 
         planeUid = p.loadURDF(os.path.join(urdfRootPath,"plane.urdf"), basePosition=[0,0,-0.65])
 
         self.cricketUid = p.loadURDF(os.path.join(urdfRootPath, "gym-cricket/gym_cricket/envs/assests/urdfs/cricket_robot.urdf"),useFixedBase=True)
@@ -93,8 +101,11 @@ class CricketEnv(gym.Env):
         # set the final state of the cricket robot
         goal_state = [] # inserisci la posizione finale di tutti i joint che ti occorrono + la posizione e l'orientation 
 
-        # get observation to return
+        # init Cricket & goal
+        self.cricket = Cricket(self.client)
+        self.goal = Goal()
 
+        # Che è sta robba zi?
         state_object= [random.uniform(0.5,0.8),random.uniform(-0.2,0.2),0.05]
         self.objectUid = p.loadURDF(os.path.join(urdfRootPath, "random_urdfs/000/000.urdf"), basePosition=state_object)
         state_robot = p.getLinkState(self.pandaUid, 11)[0]

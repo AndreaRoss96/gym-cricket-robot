@@ -1,6 +1,6 @@
 CricketEnv:
  - riguarda il constructor, particularly hte action_space and observation_space
- - implement the step (vd sotto)
+ - implement the step
  - give a look to the method reset()
  - implmement (copia) render
  - implement (copia) close

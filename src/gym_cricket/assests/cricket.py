@@ -7,7 +7,7 @@ TODO:
  - riesci a calcolare la forza normale sui tracks? oppure la calcolo in un altro file?
 '''
 class Cricket:
-    def __init__(self, client, strating_position) -> None:
+    def __init__(self, client, strating_position, joint_speed = 0, c_rolling = 0.2, c_drag = 0.01, c_throttle = 20) -> None:
         """
         Input:
         - clinet : costant
