@@ -68,19 +68,26 @@ class CricketEnv(gym.Env):
 
 
     def step(self, action):
-        """
-        To return:
+        """Advance the Task by one step.
+
+        Args:
+            action (np.ndarray): The action to be executed.
+
+        Returns: A tuple (reward, new_state, done, info)
          - reward
          - new_state
          - done (True/False)
          - info : string
         """
-        p.configureDebugVisualizer(p.COV_ENABLE_SINGLE_STEP_RENDERING)
+        self.cricket.perform_action(action)
         pos,angs,l_vel,a_vel = self.cricket.get_observations()
         
 
         pass
     
+    def __compute_reward(self):
+        p.getContactPoints(robot_id, planeId, linkIndexA=-1)
+
     def reset(self):
         ''' This function is used to reset the PyBullet environment '''
         self.step_counter = 0

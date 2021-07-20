@@ -27,9 +27,13 @@ class Cricket:
         self.client = client
         f_name = os.path.join(os.path.dirname(__file__), 'urdfs/cricket_robot.urdf')
         self.cricket = p.loadURDF(fileName = f_name,
-                                  basePosition = [0,0,0.1],
-                                  physicsClientId=client)
-        self.track_joints,self.track_idxs,self.limb_joints,self.limb_idxs = self.__find_joints()   # completes the above joint lists 
+                                  basePosition = [0,0,0.5],
+                                  physicsClientId=client
+                                  )
+                                  #flags=p.URDF_USE_SELF_COLLISION | p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
+        self.track_joints,self.track_idxs,\
+            self.limb_joints,self.limb_idxs,\
+                self.fixed_joints, self.fixed_idxs = self.__find_joints()   # completes the above joint lists 
         
         #Starting positions
         self.track_positions = np.array(strating_position[:8])
@@ -83,7 +87,7 @@ class Cricket:
         
         # Limbs movement 
         limb_angles = [val for val in action[4:,0]]
-        limb_velocites = [val for val in action[:4,1]]
+        limb_velocites = [val for val in action[4:,1]]
         self.limb_positions = np.add(self.limb_positions, limb_angles)
         self.limb_velocities = np.add(self.limb_velocities, limb_velocites)
         p.setJointMotorControlArray(
@@ -133,6 +137,11 @@ class Cricket:
             print(f'{count} - {joint}')
             print('-'*times)
         print('_'*times)
+        print('fixed joints: ')
+        for count, joint in enumerate(self.fixed_joints):
+            print(f'{count} - {joint}')
+            print('-'*times)
+        print('_'*times)
         print('Link states')
         print('='*times)
 
@@ -141,8 +150,8 @@ class Cricket:
         '''Completes the joints in the cricket robot'''
         number_of_joints = p.getNumJoints(self.cricket)
         track = []
-        track_joints, limb_joints = [], []
-        track_idxs, limb_idxs = [], []
+        track_joints, limb_joints, fixed_joints = [], [], []
+        track_idxs, limb_idxs, fixed_idxs = [], [], []
         for joint_number in range(number_of_joints):
             joint_info = p.getJointInfo(self.cricket, joint_number)
             # [jointIndex, jointName (bytes), jointType, ...]
@@ -157,7 +166,10 @@ class Cricket:
                 # the joint is revolute/continuos
                 limb_idxs.append(joint_info[0])
                 limb_joints.append(joint_info)
-        return track_joints, track_idxs, limb_joints, limb_idxs
+            else :
+                fixed_idxs.append(joint_info[0])
+                fixed_joints.append(joint_info)
+        return track_joints, track_idxs, limb_joints, limb_idxs, fixed_joints, fixed_idxs
     
     def get_joint_positions(self):
         """
