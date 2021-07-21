@@ -46,7 +46,6 @@ class CricketEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self):
-        self.step_counter = 0
         self.client = p.connect(p.GUI) # connect to PyBullet using GUI
         # Reduce length of episodes for RL algorithms
         p.setTimeStep(1/30, self.client)
@@ -90,6 +89,11 @@ class CricketEnv(gym.Env):
         self.w_sigma = w_sigma
 
 
+#######################################################
+# TODO la state che generi nella step non e' completa,#
+#      ti mancano la forza normale e tutti i cazzi    #
+#      guarda il pdf per more information             #
+#######################################################
 
     def step(self, action):
         """Advance the Task by one step.
@@ -105,12 +109,27 @@ class CricketEnv(gym.Env):
         """
         self.episode_step += 1
         self.cricket.perform_action(action)
+        # new state
         pos,angs,l_vel,a_vel = self.cricket.get_observations()
+        # reward
+        reward = self.__compute_reward(action,pos,angs)
+        #done
+        done = False
+        info = ""
+        self.previous_actions = action
+        if reward < self.previous_reward :
+            self.early_stop +=1
+            if self.early_stop >= 250 :
+                done = True
+                info = "reward doesnt grow"
+        else :
+            self.early_stop = 0
+        self.previous_reward = reward
         
 
-        pass
+        return reward, [pos,angs,l_vel,a_vel], done, info
     
-    def __compute_reward(self, action):
+    def __compute_reward(self, action,pos,angs):
         """Compute the reard based on the defined reward function"""
         # \mathcal{R}_t =-\sum_{i=0}^{no\_track}[\alpha_i(q_{t-1}^i)^2+\beta_i(q_{t-1}^i)^2+\kappa_i|\tau_{t-1}^i|+w_q^i(\Delta q_t^i)^2]-w_\varepsilon (\sum_{i=0}^5\gamma^i\varepsilon_{t-i})^2-w_tt-w_X(\Delta X)^2-w_Y(\Delta Y)^2-w_Z(\Delta Z)^2-w_\psi(\Delta \psi)^2-w_\theta(\Delta \theta)^2-w_\phi(\Delta \phi)^2
         reward = 0
@@ -148,7 +167,6 @@ class CricketEnv(gym.Env):
         reward -= self.w_t * self.episode_step
 
         # difference with the robot's final center of mass position and body rotation
-        pos,angs, _, _ = self.cricket.get_observations()
         f_pos, f_ang = self.goal.get_final_observation()
         # center of mass
         reward -= self.w_X * (abs(f_pos[0]) - abs(pos[0]))**2
@@ -158,6 +176,8 @@ class CricketEnv(gym.Env):
         reward -= self.w_psi   * (abs(f_ang[0]) - abs(angs[0]))**2
         reward -= self.w_theta * (abs(f_ang[1]) - abs(angs[1]))**2
         reward -= self.w_sigma * (abs(f_ang[2]) - abs(angs[2]))**2
+
+        return reward
 
     def __joint_penalty(self, id):
         is_continous = p.getJointInfo(self.cricketUid,id)[8] == 0.0
@@ -174,8 +194,6 @@ class CricketEnv(gym.Env):
             res = val
         return res
 
-
-        p.getContactPoints(robot_id, planeId, linkIndexA=-1)
     def reset(self):
         ''' This function is used to reset the PyBullet environment '''
         self.step_counter = 0
@@ -187,7 +205,8 @@ class CricketEnv(gym.Env):
         # Plane: to chose the plane I can do a script that changes the path to the desired 
         self.planeUid = p.loadURDF(os.path.join(urdfRootPath,"plane.urdf"), basePosition=[0,0,-0.65])
 
-        self.cricketUid = p.loadURDF(os.path.join(urdfRootPath, "gym-cricket/gym_cricket/envs/assests/urdfs/cricket_robot.urdf"),useFixedBase=True)
+        self.cricket = Cricket(self.client)
+        self.cricketUid, _ = self.cricket.get_ids
         rest_poses = [range(np.random.uniform(-math.pi,math.pi,p.getNumJoints(self.cricketUid)))]
         # here you can set the position of the joints (randomly is good)
         for i in range(p.getNumJoints(self.cricketUid)):
@@ -197,11 +216,12 @@ class CricketEnv(gym.Env):
         goal_state = [] # inserisci la posizione finale di tutti i joint che ti occorrono + la posizione e l'orientation 
 
         # init Cricket & goal
-        self.cricket = Cricket(self.client)
         self.goal = Goal()
         self.previous_actions = np.zeros(shape=(,))
         self.episode_step = 0
         self.pred_v_measured = []
+        self.previous_reward = - float('inf')
+        self.early_stop = 0
 
         # Che è sta robba zi?
         state_object= [random.uniform(0.5,0.8),random.uniform(-0.2,0.2),0.05]
