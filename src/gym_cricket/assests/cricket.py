@@ -19,9 +19,9 @@ class Cricket:
         variables: 
         self.cricket: 
             cricket_id from URDF file
-        self.track_joints and self.track_idxs:
+        self.track_joints and self.track_ids:
             joints related to the tracks --> list of lists [[wheel1,wheel2],[..],...]
-        self.limb_joints,self.limb_idxs:
+        self.limb_joints,self.limb_ids:
             all the other non-fixed joints (knees, shoulders, and so on)
         """
         self.client = client
@@ -31,9 +31,10 @@ class Cricket:
                                   physicsClientId=client
                                   )
                                   #flags=p.URDF_USE_SELF_COLLISION | p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
-        self.track_joints,self.track_idxs,\
-            self.limb_joints,self.limb_idxs,\
-                self.fixed_joints, self.fixed_idxs = self.__find_joints()   # completes the above joint lists 
+        self.track_joints,self.track_ids,\
+            self.limb_joints,self.limb_ids,\
+                self.fixed_joints, self.fixed_ids = self.__find_joints()   # completes the above joint lists 
+        
         
         #Starting positions
         self.track_positions = np.array(strating_position[:8])
@@ -50,6 +51,14 @@ class Cricket:
         self.c_drag = 0.01
         # Throttle constant increases "speed" of the car
         self.c_throttle = 20
+
+        # Store all the collision between links and their fixed accessories (which are considered collision by PyBullet)
+        self.collision_safe = {}
+        for i in self.limb_ids:
+            aa, bb = p.getAABB(self.cricket,i,self.client) # return the bounding box of the body (-1) starting from the center of mass
+            obs = p.getOverlappingObjects(aa, bb, self.client)
+            self.collision_safe.update({i : sorted(obs)})
+
     
     def perform_action(self, action):
         '''
@@ -78,7 +87,7 @@ class Cricket:
         self.track_velocities = np.add(self.track_velocities, wheel_velocities)
         p.setJointMotorControlArray(
             self.cricket,
-            jointIndices = self.track_idxs,
+            jointIndices = self.track_ids,
             controlMode = p.POSITION_CONTROL,
             targetPositions = self.track_positions,
             targetVelocities = self.track_velocities ,
@@ -92,7 +101,7 @@ class Cricket:
         self.limb_velocities = np.add(self.limb_velocities, limb_velocites)
         p.setJointMotorControlArray(
             self.cricket,
-            jointIndices = self.limb_idxs,
+            jointIndices = self.limb_ids,
             controlMode = p.POSITION_CONTROL,
             targetPositions = self.limb_positions,
             targetVelocities = self.limb_velocities,
@@ -116,8 +125,13 @@ class Cricket:
         return (pos,angs,l_vel,a_vel)
 
     def get_ids(self):
-        '''Return the PyBullet information of the robot'''
+        '''Return the basic PyBullet information of the robot'''
         return self.cricket, self.client
+    
+    def get_joint_ids(self):
+        '''Return the joints indexes (track, limb, fixed)'''
+        return self.track_ids,\
+            self.limb_ids, self.fixed_ids
 
     def print_info(self):
         '''
@@ -151,25 +165,25 @@ class Cricket:
         number_of_joints = p.getNumJoints(self.cricket)
         track = []
         track_joints, limb_joints, fixed_joints = [], [], []
-        track_idxs, limb_idxs, fixed_idxs = [], [], []
+        track_ids, limb_ids, fixed_ids = [], [], []
         for joint_number in range(number_of_joints):
             joint_info = p.getJointInfo(self.cricket, joint_number)
             # [jointIndex, jointName (bytes), jointType, ...]
             if joint_info[2] == 0 and "track" in joint_info[1].decode("utf-8"): # if the joint is revolute/continous and contains the word "track"
                 # the joint is one of the wheels
                 track.append(joint_info)
-                track_idxs.append(joint_info[0])
+                track_ids.append(joint_info[0])
                 if len(track) == 2:
                     track_joints.append(track)
                     track = []
             elif joint_info[2] == 0:
                 # the joint is revolute/continuos
-                limb_idxs.append(joint_info[0])
+                limb_ids.append(joint_info[0])
                 limb_joints.append(joint_info)
             else :
-                fixed_idxs.append(joint_info[0])
+                fixed_ids.append(joint_info[0])
                 fixed_joints.append(joint_info)
-        return track_joints, track_idxs, limb_joints, limb_idxs, fixed_joints, fixed_idxs
+        return track_joints, track_ids, limb_joints, limb_ids, fixed_joints, fixed_ids
     
     def get_joint_positions(self):
         """
@@ -192,6 +206,16 @@ class Cricket:
         limb_vel = [p.getJointState(self.cricket, joint[0])[1]
             for limb in self.limb_joints for joint in limb]
         return track_vel, limb_vel
+
+    def get_joint_collisions(self):
+        collision = {}
+        for id in self.limb_ids:
+            aa, bb = p.getAABB(self.cricket,id,self.client) # return the bounding box of the body (-1) starting from the center of mass
+            obs = p.getOverlappingObjects(aa, bb, self.client)
+            safe_obs = self.collision_safe.get(id)
+            if sorted(obs) not in safe_obs :
+                collision.update({id : list(set(obs) - set(safe_obs))})
+        return collision
 """
 USEFUL DOC:
 

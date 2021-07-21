@@ -11,6 +11,7 @@ import random
 from gym_cricket.assests.goal import Goal
 from gym_cricket.assests.cricket import Cricket
 """
+https://github.com/openai/gym/blob/master/docs/creating-environments.md
 Blog interessanti da cui attingere conoscienza:
 - Simple driving car
 https://gerardmaggiolino.medium.com/creating-openai-gym-environments-with-pybullet-part-2-a1441b9a4d8e
@@ -22,6 +23,7 @@ https://www.etedal.net/2020/04/pybullet-panda_2.html
 
 - Deep Reinforcment Learning on Robot Grasping
 https://github.com/BarisYazici/deep-rl-grasping
+file:///home/andrea/Desktop/repo_interest/deep-rl-grasping/final_report.pdf
 """
 
 
@@ -65,6 +67,28 @@ class CricketEnv(gym.Env):
             high=np.array([1, .6], dtype=np.float32))
         self.np_random, _ = gym.utils.seeding.np_random()
         self.reset()
+    
+    def set_reward_values(self,w_joints = None,w_error = 100,
+                          disc_factor = 0.99, w_t = 0.0625,w_X = 0.5,w_Y = 0.5,
+                          w_Z = 0.5,w_psi = 0.5,w_theta = 0.5,
+                          w_sigma = 0.5):
+        """Set the costants used in the reward function"""
+        if w_joints == None :
+            _, limb_joints, _ = self.cricket.get_joint_ids
+            num_limb_joints = len(limb_joints)
+            self.w_joints = np.full((num_limb_joints,), 1)
+        else :
+            self.w_joints = w_joints
+        self.w_error = w_error
+        self.disc_factor = disc_factor
+        self.w_t = w_t
+        self.w_X = w_X
+        self.w_Y = w_Y
+        self.w_Z = w_Z
+        self.w_psi = w_psi
+        self.w_theta = w_theta
+        self.w_sigma = w_sigma
+
 
 
     def step(self, action):
@@ -79,15 +103,79 @@ class CricketEnv(gym.Env):
          - done (True/False)
          - info : string
         """
+        self.episode_step += 1
         self.cricket.perform_action(action)
         pos,angs,l_vel,a_vel = self.cricket.get_observations()
         
 
         pass
     
-    def __compute_reward(self):
-        p.getContactPoints(robot_id, planeId, linkIndexA=-1)
+    def __compute_reward(self, action):
+        """Compute the reard based on the defined reward function"""
+        # \mathcal{R}_t =-\sum_{i=0}^{no\_track}[\alpha_i(q_{t-1}^i)^2+\beta_i(q_{t-1}^i)^2+\kappa_i|\tau_{t-1}^i|+w_q^i(\Delta q_t^i)^2]-w_\varepsilon (\sum_{i=0}^5\gamma^i\varepsilon_{t-i})^2-w_tt-w_X(\Delta X)^2-w_Y(\Delta Y)^2-w_Z(\Delta Z)^2-w_\psi(\Delta \psi)^2-w_\theta(\Delta \theta)^2-w_\phi(\Delta \phi)^2
+        reward = 0
+        no_track_sum = 0
+        _, limb_ids, _ = self.cricket.get_joint_ids()
+        # Penalty if the robot touches itself
+        self_collisions = self.cricket.get_joint_collisions()
+        for id,coll in self_collisions.items() :
+            no_track_sum += self.__joint_penalty(id)**2 # alpha_i(q_{t-1}^i)^2
+        # Penalty if the robot touches the environment
+        if p.getContactPoints(self.cricketUid,self.planeUid,linkIndexA=-1): # not empty
+            for id in limb_ids:
+                no_track_sum += self.__joint_penalty(id)**2 # beta_i(q_{t-1}^i)^2
+        # reward/penalty based on the direction of the last rotation
+        for c, p_action in enumerate(self.previous_actions):
+            # kappa_i|\tau_{t-1}^i|
+            if (action[c] <=0 and p_action <=0) or (action[c] > 0 and p_action > 0) :
+                # if the new action is following the old one --> reward
+                no_track_sum -= abs(p_action)
+            else :
+                # else penalty
+                no_track_sum += abs(p_action)
+        # Difference with the joints final position
+        _, limb_pos = self.cricket.get_joint_positions()
+        diff = [(abs(limb) - abs(goal_))**2 for limb, goal_ in zip(limb_pos,self.goal.get_final_joints())]
+        no_track_sum += self.w_joints * sum(diff) # w_q^i(\Delta q_t^i)^2
 
+        reward -= no_track_sum
+
+        # The error ε represent the difference between the predicted Q(s,a) and the measured Q(s,a)
+        depth = 5
+        reward -= self.w_error * sum([self.disc_factor*err for err in self.pred_v_measured[:depth]])**2
+
+        # time passed
+        reward -= self.w_t * self.episode_step
+
+        # difference with the robot's final center of mass position and body rotation
+        pos,angs, _, _ = self.cricket.get_observations()
+        f_pos, f_ang = self.goal.get_final_observation()
+        # center of mass
+        reward -= self.w_X * (abs(f_pos[0]) - abs(pos[0]))**2
+        reward -= self.w_Y * (abs(f_pos[1]) - abs(pos[1]))**2
+        reward -= self.w_Z * (abs(f_pos[2]) - abs(pos[2]))**2
+        # tortion
+        reward -= self.w_psi   * (abs(f_ang[0]) - abs(angs[0]))**2
+        reward -= self.w_theta * (abs(f_ang[1]) - abs(angs[1]))**2
+        reward -= self.w_sigma * (abs(f_ang[2]) - abs(angs[2]))**2
+
+    def __joint_penalty(self, id):
+        is_continous = p.getJointInfo(self.cricketUid,id)[8] == 0.0
+        val = p.getJointState(self.cricketUid,id)[0]
+        # normalization 
+        if is_continous:
+            if val > math.pi:
+                res = val%math.pi - math.pi
+            elif val < math.pi:
+                res = val%math.pi + math.pi
+            else :
+                res = val
+        else:
+            res = val
+        return res
+
+
+        p.getContactPoints(robot_id, planeId, linkIndexA=-1)
     def reset(self):
         ''' This function is used to reset the PyBullet environment '''
         self.step_counter = 0
@@ -97,7 +185,7 @@ class CricketEnv(gym.Env):
         p.setGravity(0,0,-10)
 
         # Plane: to chose the plane I can do a script that changes the path to the desired 
-        planeUid = p.loadURDF(os.path.join(urdfRootPath,"plane.urdf"), basePosition=[0,0,-0.65])
+        self.planeUid = p.loadURDF(os.path.join(urdfRootPath,"plane.urdf"), basePosition=[0,0,-0.65])
 
         self.cricketUid = p.loadURDF(os.path.join(urdfRootPath, "gym-cricket/gym_cricket/envs/assests/urdfs/cricket_robot.urdf"),useFixedBase=True)
         rest_poses = [range(np.random.uniform(-math.pi,math.pi,p.getNumJoints(self.cricketUid)))]
@@ -111,6 +199,9 @@ class CricketEnv(gym.Env):
         # init Cricket & goal
         self.cricket = Cricket(self.client)
         self.goal = Goal()
+        self.previous_actions = np.zeros(shape=(,))
+        self.episode_step = 0
+        self.pred_v_measured = []
 
         # Che è sta robba zi?
         state_object= [random.uniform(0.5,0.8),random.uniform(-0.2,0.2),0.05]

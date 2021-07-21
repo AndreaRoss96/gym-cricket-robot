@@ -19,6 +19,8 @@ planeId = p.loadURDF("plane.urdf")
 ##########################
 ### STARTING POSITIONS ###
 ##########################
+# Zeros
+zero_starting_pos = np.zeros((24,))
 # Random
 rand_starting_pos = np.random.uniform(low=-3.14, high=3.14, size=(24,))
 # All legs up 
@@ -99,19 +101,29 @@ while True:
         ]
     )
     bella = "*" * 20
-    print(f"{bella} get AABB {bella}")
-    aa, bb = p.getAABB(robot_id,7,physicsClient) # return the bounding box of the body (-1) starting from the center of mass
-    print(f'AA:{aa}')
-    print(f'BB:{bb}')
-    print(f"{bella} getOverlappingObjects {bella}")
-    obs = p.getOverlappingObjects(aa, bb, physicsClient)
-    print(f'OBS {obs}')
+    
+    for i in range(7,8):
+        # print(f"{bella} get AABB {bella}")
+        aa, bb = p.getAABB(robot_id,i,physicsClient) # return the bounding box of the body (-1) starting from the center of mass
+        # print(f'AA:{aa}')
+        # print(f'BB:{bb}')
+        print(f"{i} - {bella} getOverlappingObjects {bella}")
+        obs = p.getOverlappingObjects(aa, bb, physicsClient)
+        to_print = []
+        excl = 10000
+        for e in obs:
+            if e[1] != 6 and e[1] != 7 and e[1] != 8 :
+                to_print.append(e)
+        print(f'OBS {to_print}')
     print()
     print(f"{bella} getContactPoints {bella}")
-    for i in range(0,10):
-        print(p.getContactPoints(robot_id, robot_id, linkIndexA=i))
+
+    # for i in range(0,43):
+    #     # print(p.getCollisionShapeData(robot_id,i,physicsClient))
+    #     print(p.getContactPoints(robot_id, robot_id,i))
 
     print("___"*30)
+    print(p.getContactPoints(robot_id, planeId, linkIndexA=-1))
     # if aa[2] < 0 :
     #     print("touch!!!!!!!!!!")
     #     time.sleep(1000)
@@ -125,7 +137,7 @@ while True:
         # if p.getJointState(robot_id, robot.limb_joints[0][0])[0] < -1.566 :
         #     break
 
-    time.sleep(1./3.)
+    time.sleep(1./10.)
     p.stepSimulation()
 
 # #print(f'observation: {robot.get_observations()}')
