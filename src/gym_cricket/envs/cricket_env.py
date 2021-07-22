@@ -88,13 +88,6 @@ class CricketEnv(gym.Env):
         self.w_theta = w_theta
         self.w_sigma = w_sigma
 
-
-#######################################################
-# TODO la state che generi nella step non e' completa,#
-#      ti mancano la forza normale e tutti i cazzi    #
-#      guarda il pdf per more information             #
-#######################################################
-
     def step(self, action):
         """Advance the Task by one step.
 
@@ -102,15 +95,16 @@ class CricketEnv(gym.Env):
             action (np.ndarray): The action to be executed.
 
         Returns: A tuple (reward, new_state, done, info)
-         - reward
-         - new_state
-         - done (True/False)
-         - info : string
+         - reward   : float
+         - new_state: [(x,y,z),(psi,theta,sigma),(vx,vy,vz),(vpsi,vtheta,vsigma),(f1,f2,f3,f4)]
+         - done     : Boolean
+         - info     : string
         """
         self.episode_step += 1
         self.cricket.perform_action(action)
         # new state
         pos,angs,l_vel,a_vel = self.cricket.get_observations()
+        normal_forces = self.cricket.get_normal_forces(self.planeUid)
         # reward
         reward = self.__compute_reward(action,pos,angs)
         #done
@@ -127,7 +121,7 @@ class CricketEnv(gym.Env):
         self.previous_reward = reward
         
 
-        return reward, [pos,angs,l_vel,a_vel], done, info
+        return reward, [pos,angs,l_vel,a_vel,normal_forces], done, info
     
     def __compute_reward(self, action,pos,angs):
         """Compute the reard based on the defined reward function"""

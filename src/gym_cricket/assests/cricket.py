@@ -35,13 +35,14 @@ class Cricket:
             self.limb_joints,self.limb_ids,\
                 self.fixed_joints, self.fixed_ids = self.__find_joints()   # completes the above joint lists 
         
+        num_wheel = 8
         
         #Starting positions
-        self.track_positions = np.array(strating_position[:8])
-        self.limb_positions = np.array(strating_position[8:])
+        self.track_positions = np.array(strating_position[:num_wheel])
+        self.limb_positions = np.array(strating_position[num_wheel:])
 
         # Starting velocities 0
-        self.track_velocities = np.zeros(8)
+        self.track_velocities = np.zeros(num_wheel)
         self.limb_velocities = np.zeros(len(self.limb_positions))
 
         # Joint speed
@@ -69,7 +70,7 @@ class Cricket:
 
         Domanda: should I need to add the acceleration of the tortion as well?
 
-        action:
+        action:non voglio essere nell'intreccio delle loro vite wathcman dr manhattan
             0-3 the value of the tracks movement 
             4... the tortion of all the other joints
         '''
@@ -183,7 +184,9 @@ class Cricket:
             else :
                 fixed_ids.append(joint_info[0])
                 fixed_joints.append(joint_info)
-        return track_joints, track_ids, limb_joints, limb_ids, fixed_joints, fixed_ids
+        return np.array(track_joints), np.array(track_ids),\
+                np.array(limb_joints), np.array(limb_ids),\
+                 np.array(fixed_joints), np.array(fixed_ids)
     
     def get_joint_positions(self):
         """
@@ -216,6 +219,33 @@ class Cricket:
             if sorted(obs) not in safe_obs :
                 collision.update({id : list(set(obs) - set(safe_obs))})
         return collision
+
+    def get_normal_forces(self, planeId : str):
+        """Get all the normal forces between the robot and palneId
+        
+        If it's not possible to obtain 4 normal forces an array full of zeros will complete it
+        if there are more than 4 normal forces per track, it will choose randomly
+
+        Return:
+         - a list of 4 lists (one per track) of normal forces, for each list:
+            4 normal forces along the wheels and the track between the wheels
+        """
+        n_normal_f = 4
+        for wheel_1,wheel_2 in self.track_ids:
+            track_id = wheel_1 + 1
+            contact_points = [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=wheel_1)]
+            contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=wheel_2)]
+            contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=track_id)]
+
+            if len(contact_points) < n_normal_f:
+                contact_points += [0] * (n_normal_f - len(contact_points))
+            elif len(contact_points) > n_normal_f :
+                contact_points = sorted(contact_points, reverse=True)[:n_normal_f]
+            
+            return contact_points
+
+
+
 """
 USEFUL DOC:
 
