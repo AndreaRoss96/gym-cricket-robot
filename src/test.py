@@ -147,16 +147,18 @@ while True:
         # print(f'OBS {to_print}')
     print()
     print(f"{bella} getContactPoints {bella}")
+    t_pos, l_pos = robot.get_joint_positions()
+    print(t_pos[0])
 
     # for i in range(0,43):
     #     # print(p.getCollisionShapeData(robot_id,i,physicsClient))
     #     print(p.getContactPoints(robot_id, robot_id,i))
 
-    print("___"*50)
-    contact_points_printer(p.getContactPoints(robot_id, planeId, linkIndexA=10), 'wheel_1')
-    contact_points_printer(p.getContactPoints(robot_id, planeId, linkIndexA=11), 'track')
-    contact_points_printer(p.getContactPoints(robot_id, planeId, linkIndexA=12), 'wheel_2')
-    print("___"*50)
+    # print("___"*50)
+    # contact_points_printer(p.getContactPoints(robot_id, planeId, linkIndexA=10), 'wheel_1')
+    # contact_points_printer(p.getContactPoints(robot_id, planeId, linkIndexA=11), 'track')
+    # contact_points_printer(p.getContactPoints(robot_id, planeId, linkIndexA=12), 'wheel_2')
+    # print("___"*50)
     # if aa[2] < 0 :
     #     print("touch!!!!!!!!!!")
     #     time.sleep(1000)
@@ -170,7 +172,7 @@ while True:
         # if p.getJointState(robot_id, robot.limb_joints[0][0])[0] < -1.566 :
         #     break
 
-    time.sleep(1./5.)
+    time.sleep(1./1.)
     p.stepSimulation()
 
 # #print(f'observation: {robot.get_observations()}')

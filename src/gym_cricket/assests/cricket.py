@@ -1,3 +1,4 @@
+from numpy.core.defchararray import join
 import pybullet as p
 import numpy as np
 import os
@@ -29,7 +30,8 @@ class Cricket:
                                   #flags=p.URDF_USE_SELF_COLLISION | p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
         self.track_joints,self.track_ids,\
             self.limb_joints,self.limb_ids,\
-                self.fixed_joints, self.fixed_ids = self.__find_joints()   # completes the above joint lists 
+                self.fixed_joints, self.fixed_ids,\
+                    self.cont_ids, self.revo_ids = self.__find_joints()   # completes the above joint lists 
         
         num_wheel = 8
         
@@ -47,6 +49,9 @@ class Cricket:
         # Max and Min angular velocity
         self.max_avel = np.array([100,100,100])
         self.min_avel = np.array([0,0,0])
+
+        # Normal forces
+        self.n_normal_f = 4
 
         # Joint speed
         self.joint_speed = 0
@@ -144,6 +149,7 @@ class Cricket:
         print('='*times)
         print(f'ID: {self.cricket}')
         print(f'clinet: {self.client}')
+        print(f'Body mass: {p.getDynamicsInfo(self.cricket,-1,self.client)}')
         print('tracks: ')
         for count, track in enumerate(self.track_joints):
             print(f'{count} - {track}')
@@ -169,6 +175,7 @@ class Cricket:
         track = []
         track_joints, limb_joints, fixed_joints = [], [], []
         track_ids, limb_ids, fixed_ids = [], [], []
+        cont_ids, revo_ids = [], []
         for joint_number in range(number_of_joints):
             joint_info = p.getJointInfo(self.cricket, joint_number)
             # [jointIndex, jointName (bytes), jointType, ...]
@@ -188,7 +195,8 @@ class Cricket:
                 fixed_joints.append(joint_info)
         return np.array(track_joints), np.array(track_ids),\
                 np.array(limb_joints), np.array(limb_ids),\
-                 np.array(fixed_joints), np.array(fixed_ids)
+                 np.array(fixed_joints), np.array(fixed_ids),\
+                  np.array(cont_ids),np.array(revo_ids)
     
     def get_joint_positions(self):
         """
@@ -197,9 +205,23 @@ class Cricket:
         """
         track_pos = [p.getJointState(self.cricket, wheel[0])[0] # wheel[0] gets the jointIndex
             for track in self.track_joints for wheel in track]
+        track_pos = self.__normalize(track_pos)
+
         limb_pos = [p.getJointState(self.cricket, joint[0])[0]
-            for limb in self.limb_joints for joint in limb]
+            for joint in self.limb_joints]
+        limb_pos = self.__normalize(limb_pos)
+        # should I return two dictionaries? --> dict(zip(list1,list2))
         return track_pos, limb_pos
+    
+    def __normalize(self, position_list):
+        '''Helps get_joint_position to normalize the returned values'''
+        res = []
+        for position in position_list:
+            if position % (2*np.pi) > np.pi or position == (2*np.pi) :
+                res.append(position%np.pi-np.pi )
+            else :
+                res.append(position%np.pi)
+        return res
     
     def get_joint_velocities(self):
         """
@@ -232,20 +254,44 @@ class Cricket:
          - a list of 4 lists (one per track) of normal forces, for each list:
             4 normal forces along the wheels and the track between the wheels
         """
-        n_normal_f = 4
         for wheel_1,wheel_2 in self.track_ids:
             track_id = wheel_1 + 1
             contact_points = [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=wheel_1)]
             contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=wheel_2)]
             contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=track_id)]
 
-            if len(contact_points) < n_normal_f:
-                contact_points += [0] * (n_normal_f - len(contact_points))
-            elif len(contact_points) > n_normal_f :
-                contact_points = sorted(contact_points, reverse=True)[:n_normal_f]
+            if len(contact_points) < self.n_normal_f:
+                contact_points += [0] * (self.n_normal_f - len(contact_points))
+            elif len(contact_points) > self.n_normal_f :
+                contact_points = sorted(contact_points, reverse=True)[:self.n_normal_f]
             
             return contact_points
 
+    def get_joint_limits(self):
+        high_lim, low_lim = [] ,[]
+        for joint in self.limb_joints:
+            if joint[8] == 0 : # continous joint
+                high_lim.append(np.pi)
+                low_lim.append(-np.pi)
+            else:
+                high_lim.append(np.pi/2)
+                low_lim.append(-np.pi/2)
+        return np.array(high_lim), np.array(low_lim)
+
+    def get_track_limits(self):
+        high_lim, low_lim = np.full((4,), np.pi), np.full((4,),-np.full)
+        return high_lim,low_lim
+
+    def get_normal_forces_limits(self,gravity):
+        mass = 10000 # grams --> there's a way to get the mass
+        max_nf, min_nf = np.full((self.n_normal_f,),mass*gravity), np.zeros((self.n_normal_f))
+        return max_nf,min_nf
+
+    def get_action_limits(self):
+        dim = len(self.limb_ids) + len(self.track_ids)
+        high_lim = np.full((dim,), np.pi)
+        low_lim = -high_lim
+        return high_lim,low_lim
 
 
 """

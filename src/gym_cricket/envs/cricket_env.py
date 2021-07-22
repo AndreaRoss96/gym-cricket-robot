@@ -46,6 +46,7 @@ class CricketEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self):
+        self.n_loss = 5
         self.client = p.connect(p.GUI) # connect to PyBullet using GUI
         # Reduce length of episodes for RL algorithms
         p.setTimeStep(1/30, self.client)
@@ -57,29 +58,40 @@ class CricketEnv(gym.Env):
             cameraTargetPosition=[0.55,-0.35,0.2])
         
         urdfRootPath=pybullet_data.getDataPath()
-        p.setGravity(0,0,-10)
+        gravity = -9.81
+        p.setGravity(0,0,gravity)
         # Plane: to chose the plane I can do a script that changes the path to the desired 
         self.planeUid = p.loadURDF(os.path.join(urdfRootPath,"plane.urdf"), basePosition=[0,0,-0.65])
 
         self.cricket = Cricket(self.client)
         self.cricketUid, _ = self.cricket.get_ids()
 
-        # Defining observation space A.K.A. what the NN needs
+        # Defining OBSERVATION space A.K.A. NN inputs
         ## position X,Y,Z
         high_pos = np.inf * np.ones(3)
         low_pos = -high_pos
-        ## orientation
+        ## orientation φ, θ, ψ
         high_ang = np.pi * np.ones(3)
         low_ang = - high_ang
         ## velocity linear and angular
         high_vel = np.concatenate(self.cricket.max_lvel,self.cricket.max_avel)
         low_vel = np.concatenate(self.cricket.min_lvel,self.cricket.min_avel)
-        ## 
+        ## leg joints
+        high_leg, low_leg = self.cricket.get_joint_limits()
+        ## tracks
+        high_track, low_track = self.cricket.get_track_limits()
+        ## normal forces
+        high_nf,low_nf = self.cricket.get_normal_forces_limits(gravity)
+        ## Computed Loss
+        high_loss, low_loss = np.full((self.n_loss,), np.inf), np.zeros((self.n_loss,))
         # Let's describe the format of valid actions and observations.
         self.observation_space = spaces.Box(
             # modifica con i dati delle rotazioni e della forza normale
-            low=np.array([-10, -10, -1, -1, -5, -5, -10, -10], dtype=np.float32),
-            high=np.array([10, 10, 1, 1, 5, 5, 10, 10], dtype=np.float32))
+            low=np.array(np.concatenate(low_pos,low_ang,low_vel,low_leg,low_track,low_nf,low_loss), dtype=np.float32),
+            high=np.array(np.concatenate(high_pos,high_ang,high_vel,high_leg,high_track,high_nf,high_loss), dtype=np.float32))
+        
+        # Defining ACTION space A.K.A. NN outputs
+        high_lim, low_lim = self.cricket.get_action_limits()
         self.action_space = spaces.Box(
             # modifica con gli intervalli delle torsioni dei joint e delle track
             low=np.array([0, -.6], dtype=np.float32),
@@ -127,7 +139,7 @@ class CricketEnv(gym.Env):
         track_pos, limb_pos = self.cricket.get_joint_positions()
         normal_forces = self.cricket.get_normal_forces(self.planeUid)
         # reward
-        reward = self.__compute_reward(action,pos,angs)
+        reward = self.__compute_reward(action,pos,angs,limb_pos)
         #done
         done = False
         info = ""
@@ -144,20 +156,26 @@ class CricketEnv(gym.Env):
 
         return reward, [pos,angs,l_vel,a_vel,normal_forces,track_pos,limb_pos], done, info
     
-    def __compute_reward(self, action,pos,angs):
+    def __compute_reward(self, action,pos,angs, limb_pos):
         """Compute the reard based on the defined reward function"""
         # \mathcal{R}_t =-\sum_{i=0}^{no\_track}[\alpha_i(q_{t-1}^i)^2+\beta_i(q_{t-1}^i)^2+\kappa_i|\tau_{t-1}^i|+w_q^i(\Delta q_t^i)^2]-w_\varepsilon (\sum_{i=0}^5\gamma^i\varepsilon_{t-i})^2-w_tt-w_X(\Delta X)^2-w_Y(\Delta Y)^2-w_Z(\Delta Z)^2-w_\psi(\Delta \psi)^2-w_\theta(\Delta \theta)^2-w_\phi(\Delta \phi)^2
         reward = 0
         no_track_sum = 0
         _, limb_ids, _ = self.cricket.get_joint_ids()
+
         # Penalty if the robot touches itself
         self_collisions = self.cricket.get_joint_collisions()
         for id,coll in self_collisions.items() :
-            no_track_sum += self.__joint_penalty(id)**2 # alpha_i(q_{t-1}^i)^2
+            index = np.where(limb_ids == id)
+            no_track_sum += (limb_pos[index])**2
+            #no_track_sum += self.__joint_penalty(id)**2 # alpha_i(q_{t-1}^i)^2
+        
         # Penalty if the robot touches the environment
         if p.getContactPoints(self.cricketUid,self.planeUid,linkIndexA=-1): # not empty
             for id in limb_ids:
-                no_track_sum += self.__joint_penalty(id)**2 # beta_i(q_{t-1}^i)^2
+                no_track_sum += (limb_pos[index])**2
+                #no_track_sum += self.__joint_penalty(id)**2 # beta_i(q_{t-1}^i)^2
+        
         # reward/penalty based on the direction of the last rotation
         for c, p_action in enumerate(self.previous_actions):
             # kappa_i|\tau_{t-1}^i|
@@ -167,8 +185,8 @@ class CricketEnv(gym.Env):
             else :
                 # else penalty
                 no_track_sum += abs(p_action)
+
         # Difference with the joints final position
-        _, limb_pos = self.cricket.get_joint_positions()
         diff = [(abs(limb) - abs(goal_))**2 for limb, goal_ in zip(limb_pos,self.goal.get_final_joints())]
         no_track_sum += self.w_joints * sum(diff) # w_q^i(\Delta q_t^i)^2
 
