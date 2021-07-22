@@ -1,11 +1,7 @@
 import pybullet as p
 import numpy as np
 import os
-import math
-'''
-TODO:
- - riesci a calcolare la forza normale sui tracks? oppure la calcolo in un altro file?
-'''
+
 class Cricket:
     def __init__(self, client, strating_position, joint_speed = 0, c_rolling = 0.2, c_drag = 0.01, c_throttle = 20) -> None:
         """
@@ -45,6 +41,13 @@ class Cricket:
         self.track_velocities = np.zeros(num_wheel)
         self.limb_velocities = np.zeros(len(self.limb_positions))
 
+        # Max and Min linear velocity
+        self.max_lvel = np.array([100,100,100])
+        self.min_lvel = np.array([0,0,0])
+        # Max and Min angular velocity
+        self.max_avel = np.array([100,100,100])
+        self.min_avel = np.array([0,0,0])
+
         # Joint speed
         self.joint_speed = 0
         # Drag constants
@@ -60,7 +63,6 @@ class Cricket:
             obs = p.getOverlappingObjects(aa, bb, self.client)
             self.collision_safe.update({i : sorted(obs)})
 
-    
     def perform_action(self, action):
         '''
         The action passed to the robot are the angles of the joints and the rotation of

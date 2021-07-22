@@ -55,6 +55,26 @@ class CricketEnv(gym.Env):
             cameraYaw=0,
             cameraPitch=-40,
             cameraTargetPosition=[0.55,-0.35,0.2])
+        
+        urdfRootPath=pybullet_data.getDataPath()
+        p.setGravity(0,0,-10)
+        # Plane: to chose the plane I can do a script that changes the path to the desired 
+        self.planeUid = p.loadURDF(os.path.join(urdfRootPath,"plane.urdf"), basePosition=[0,0,-0.65])
+
+        self.cricket = Cricket(self.client)
+        self.cricketUid, _ = self.cricket.get_ids()
+
+        # Defining observation space A.K.A. what the NN needs
+        ## position X,Y,Z
+        high_pos = np.inf * np.ones(3)
+        low_pos = -high_pos
+        ## orientation
+        high_ang = np.pi * np.ones(3)
+        low_ang = - high_ang
+        ## velocity linear and angular
+        high_vel = np.concatenate(self.cricket.max_lvel,self.cricket.max_avel)
+        low_vel = np.concatenate(self.cricket.min_lvel,self.cricket.min_avel)
+        ## 
         # Let's describe the format of valid actions and observations.
         self.observation_space = spaces.Box(
             # modifica con i dati delle rotazioni e della forza normale
@@ -104,6 +124,7 @@ class CricketEnv(gym.Env):
         self.cricket.perform_action(action)
         # new state
         pos,angs,l_vel,a_vel = self.cricket.get_observations()
+        track_pos, limb_pos = self.cricket.get_joint_positions()
         normal_forces = self.cricket.get_normal_forces(self.planeUid)
         # reward
         reward = self.__compute_reward(action,pos,angs)
@@ -115,13 +136,13 @@ class CricketEnv(gym.Env):
             self.early_stop +=1
             if self.early_stop >= 250 :
                 done = True
-                info = "reward doesnt grow"
+                info = "reward doesn't grow"
         else :
             self.early_stop = 0
         self.previous_reward = reward
         
 
-        return reward, [pos,angs,l_vel,a_vel,normal_forces], done, info
+        return reward, [pos,angs,l_vel,a_vel,normal_forces,track_pos,limb_pos], done, info
     
     def __compute_reward(self, action,pos,angs):
         """Compute the reard based on the defined reward function"""
@@ -193,14 +214,9 @@ class CricketEnv(gym.Env):
         self.step_counter = 0
         p.resetSimulation()     # reset PyBullet environment
         p.configureDebugVisualizer(p.COV_ENABLE_RENDERING,0) # we will enable rendering after we loaded everything
-        urdfRootPath=pybullet_data.getDataPath()
-        p.setGravity(0,0,-10)
 
-        # Plane: to chose the plane I can do a script that changes the path to the desired 
-        self.planeUid = p.loadURDF(os.path.join(urdfRootPath,"plane.urdf"), basePosition=[0,0,-0.65])
 
-        self.cricket = Cricket(self.client)
-        self.cricketUid, _ = self.cricket.get_ids
+        # roba che mi serve (?)
         rest_poses = [range(np.random.uniform(-math.pi,math.pi,p.getNumJoints(self.cricketUid)))]
         # here you can set the position of the joints (randomly is good)
         for i in range(p.getNumJoints(self.cricketUid)):
