@@ -4,7 +4,7 @@ import numpy as np
 import os
 
 class Cricket:
-    def __init__(self, client, strating_position, joint_speed = 0, c_rolling = 0.2, c_drag = 0.01, c_throttle = 20) -> None:
+    def __init__(self, client, strating_position=None, joint_speed = 0, c_rolling = 0.2, c_drag = 0.01, c_throttle = 20) -> None:
         """
         Input:
         - clinet : costant
@@ -34,10 +34,16 @@ class Cricket:
                     self.cont_ids, self.revo_ids = self.__find_joints()   # completes the above joint lists 
         
         num_wheel = 8
+        num_tracks = len(self.track_joints)
+        num_joints = len(self.limb_ids)
         
         #Starting positions
-        self.track_positions = np.array(strating_position[:num_wheel])
-        self.limb_positions = np.array(strating_position[num_wheel:])
+        if strating_position == None:
+            self.track_positions = np.zeros((num_tracks,))
+            self.limb_positions = np.zeros((num_joints))
+        else :
+            self.track_positions = np.array(strating_position[:num_wheel])
+            self.limb_positions = np.array(strating_position[num_wheel:])
 
         # Starting velocities 0
         self.track_velocities = np.zeros(num_wheel)

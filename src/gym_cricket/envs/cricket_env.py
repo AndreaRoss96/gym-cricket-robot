@@ -86,17 +86,16 @@ class CricketEnv(gym.Env):
         high_loss, low_loss = np.full((self.n_loss,), np.inf), np.zeros((self.n_loss,))
         # Let's describe the format of valid actions and observations.
         self.observation_space = spaces.Box(
-            # modifica con i dati delle rotazioni e della forza normale
             low=np.array(np.concatenate(low_pos,low_ang,low_vel,low_leg,low_track,low_nf,low_loss), dtype=np.float32),
             high=np.array(np.concatenate(high_pos,high_ang,high_vel,high_leg,high_track,high_nf,high_loss), dtype=np.float32))
         
         # Defining ACTION space A.K.A. NN outputs
         high_lim, low_lim = self.cricket.get_action_limits()
         self.action_space = spaces.Box(
-            # modifica con gli intervalli delle torsioni dei joint e delle track
-            low=np.array([0, -.6], dtype=np.float32),
-            high=np.array([1, .6], dtype=np.float32))
+            low=np.array(high_lim, dtype=np.float32),
+            high=np.array(low_lim, dtype=np.float32))
         self.np_random, _ = gym.utils.seeding.np_random()
+
         self.reset()
     
     def set_reward_values(self,w_joints = None,w_error = 100,
@@ -212,7 +211,7 @@ class CricketEnv(gym.Env):
 
         return reward
 
-    def __joint_penalty(self, id):
+    def __joint_penalty(self, id): # DELETE
         is_continous = p.getJointInfo(self.cricketUid,id)[8] == 0.0
         val = p.getJointState(self.cricketUid,id)[0]
         # normalization 
@@ -262,11 +261,30 @@ class CricketEnv(gym.Env):
 
 
     def render(self, mode='human'):
-        # che fa render?
-    ...
+        view_matrix = p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[0.7,0,0.05],
+                                                            distance=.7,
+                                                            yaw=90,
+                                                            pitch=-70,
+                                                            roll=0,
+                                                            upAxisIndex=2)
+        proj_matrix = p.computeProjectionMatrixFOV(fov=60,
+                                                     aspect=float(960) /720,
+                                                     nearVal=0.1,
+                                                     farVal=100.0)
+        (_, _, px, _, _) = p.getCameraImage(width=960,
+                                              height=720,
+                                              viewMatrix=view_matrix,
+                                              projectionMatrix=proj_matrix,
+                                              renderer=p.ER_BULLET_HARDWARE_OPENGL)
+
+        rgb_array = np.array(px, dtype=np.uint8)
+        rgb_array = np.reshape(rgb_array, (720,960, 4))
+
+        rgb_array = rgb_array[:, :, :3]
+        return rgb_array
 
     def close(self):
-    ...
+        p.disconnect()
 
     def seed(self, seed=None):
         '''
