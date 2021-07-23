@@ -8,7 +8,7 @@ import pybullet_data
 import math
 import numpy as np
 import random
-from gym_cricket.assests.goal import Goal
+from gym_cricket.assests.cricketGoal import CricketGoal
 from gym_cricket.assests.cricket import Cricket
 """
 https://github.com/openai/gym/blob/master/docs/creating-environments.md
@@ -48,7 +48,7 @@ class CricketEnv(gym.Env):
     def __init__(self):
         self.n_loss = 5
         gravity = -9.81
-        
+
         self.client = p.connect(p.GUI) # connect to PyBullet using GUI
         # Reduce length of episodes for RL algorithms
         p.setTimeStep(1/30, self.client)
@@ -191,7 +191,7 @@ class CricketEnv(gym.Env):
                 no_track_sum += abs(p_action)
 
         # Difference with the joints final position
-        diff = [(abs(limb) - abs(goal_))**2 for limb, goal_ in zip(limb_pos,self.goal.get_final_joints())]
+        diff = [(abs(limb) - abs(f_limb))**2 for limb, f_limb in zip(limb_pos,self.goal.get_final_joints())]
         no_track_sum += self.w_joints * sum(diff) # w_q^i(\Delta q_t^i)^2
 
         reward -= no_track_sum
@@ -244,7 +244,7 @@ class CricketEnv(gym.Env):
         p.resetSimulation(self.client)     # reset PyBullet environment
         p.configureDebugVisualizer(p.COV_ENABLE_RENDERING,1) # we will enable rendering after we loaded everything
         p.setGravity(0,0,-9.81)
-        # roba che mi serve (?)
+        
         rest_poses = [range(np.random.uniform(-math.pi,math.pi,p.getNumJoints(self.cricketUid)))]
         # here you can set the position of the joints (randomly is good)
         for i in range(p.getNumJoints(self.cricketUid)):
@@ -254,7 +254,7 @@ class CricketEnv(gym.Env):
         goal_state = [] # inserisci la posizione finale di tutti i joint che ti occorrono + la posizione e l'orientation 
 
         # init Cricket & goal
-        self.goal = Goal()
+        self.goal = CricketGoal()
         dim = len(self.cricket.get_action_limits())
         self.previous_actions = np.zeros(shape=(dim,))
         self.episode_step = 0

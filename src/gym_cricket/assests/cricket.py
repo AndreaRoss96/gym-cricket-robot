@@ -4,7 +4,7 @@ import numpy as np
 import os
 
 class Cricket:
-    def __init__(self, client, strating_position=[], joint_speed = 0, c_rolling = 0.2, c_drag = 0.01, c_throttle = 20) -> None:
+    def __init__(self, client, strating_position=[], base_position = [0,0,0.5], joint_speed = 0, c_rolling = 0.2, c_drag = 0.01, c_throttle = 20) -> None:
         """
         Input:
         - clinet : costant
@@ -24,7 +24,7 @@ class Cricket:
         self.client = client
         f_name = os.path.join(os.path.dirname(__file__), 'urdfs/cricket_robot.urdf')
         self.cricket = p.loadURDF(fileName = f_name,
-                                  basePosition = [0,0,0.5],
+                                  basePosition = base_position,
                                   physicsClientId=client
                                   )
                                   #flags=p.URDF_USE_SELF_COLLISION | p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
@@ -44,6 +44,15 @@ class Cricket:
         else :
             self.track_positions = np.array(strating_position[:num_wheel])
             self.limb_positions = np.array(strating_position[num_wheel:])
+        
+        for joint_id, joint_pos in zip(self.limb_ids, self.limb_positions):
+            p.resetJointState(
+                self.cricket,
+                joint_id,
+                joint_pos,
+                0,
+                self.client
+            )
 
         # Starting velocities 0
         self.track_velocities = np.zeros(num_wheel)
@@ -204,10 +213,10 @@ class Cricket:
             else :
                 fixed_ids.append(joint_info[0])
                 fixed_joints.append(joint_info)
-        return np.array(track_joints), np.array(track_ids),\
-                np.array(limb_joints), np.array(limb_ids),\
-                 np.array(fixed_joints), np.array(fixed_ids),\
-                  np.array(cont_ids),np.array(revo_ids)
+        return np.array(track_joints, dtype=object), np.array(track_ids, dtype=object),\
+                np.array(limb_joints, dtype=object), np.array(limb_ids, dtype=object),\
+                 np.array(fixed_joints, dtype=object), np.array(fixed_ids, dtype=object),\
+                  np.array(cont_ids, dtype=object),np.array(revo_ids, dtype=object)
     
     def get_joint_positions(self):
         """
