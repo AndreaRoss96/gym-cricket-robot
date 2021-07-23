@@ -1,9 +1,9 @@
 CricketEnv:
  - @FATTO riguarda il constructor, particularly hte action_space and observation_space --> in reset fai previous_action
  - @FATTO implement the step + reward function 
- - give a look to the method reset()
- - @FATTOimplmement (copia) render
- - @FATTOimplement (copia) close
+ - @FATTO give a look to the method reset()
+ - @FATTO implmement (copia) render
+ - @FATTO implement (copia) close
 
 Goal: --> suggerimento: guarda alle funzioni che ho scritto per finta nell'env
  - in order to compute the reward function, we need to implement tha class GOAL,

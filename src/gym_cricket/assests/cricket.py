@@ -4,7 +4,7 @@ import numpy as np
 import os
 
 class Cricket:
-    def __init__(self, client, strating_position=None, joint_speed = 0, c_rolling = 0.2, c_drag = 0.01, c_throttle = 20) -> None:
+    def __init__(self, client, strating_position=[], joint_speed = 0, c_rolling = 0.2, c_drag = 0.01, c_throttle = 20) -> None:
         """
         Input:
         - clinet : costant
@@ -38,7 +38,7 @@ class Cricket:
         num_joints = len(self.limb_ids)
         
         #Starting positions
-        if strating_position == None:
+        if strating_position == []:
             self.track_positions = np.zeros((num_tracks,))
             self.limb_positions = np.zeros((num_joints))
         else :
@@ -139,7 +139,12 @@ class Cricket:
         return (pos,angs,l_vel,a_vel)
 
     def get_ids(self):
-        '''Return the basic PyBullet information of the robot'''
+        '''Return the basic PyBullet information of the robot
+        
+        Return:
+         - ID
+         - Client
+        '''
         return self.cricket, self.client
     
     def get_joint_ids(self):

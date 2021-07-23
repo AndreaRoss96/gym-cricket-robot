@@ -47,6 +47,8 @@ class CricketEnv(gym.Env):
 
     def __init__(self):
         self.n_loss = 5
+        gravity = -9.81
+        
         self.client = p.connect(p.GUI) # connect to PyBullet using GUI
         # Reduce length of episodes for RL algorithms
         p.setTimeStep(1/30, self.client)
@@ -58,8 +60,7 @@ class CricketEnv(gym.Env):
             cameraTargetPosition=[0.55,-0.35,0.2])
         
         urdfRootPath=pybullet_data.getDataPath()
-        gravity = -9.81
-        p.setGravity(0,0,gravity)
+        
         # Plane: to chose the plane I can do a script that changes the path to the desired 
         self.planeUid = p.loadURDF(os.path.join(urdfRootPath,"plane.urdf"), basePosition=[0,0,-0.65])
 
@@ -134,11 +135,15 @@ class CricketEnv(gym.Env):
         self.episode_step += 1
         self.cricket.perform_action(action)
         # new state
-        pos,angs,l_vel,a_vel = self.cricket.get_observations()
-        track_pos, limb_pos = self.cricket.get_joint_positions()
-        normal_forces = self.cricket.get_normal_forces(self.planeUid)
+        state_keys = ["pos","angs","l_vel","a_vel","limb_pos","track_pos","normal_forces","loss_state"]
+        current_state = self.current_state()
+        new_state = dict(zip(state_keys,current_state))
         # reward
-        reward = self.__compute_reward(action,pos,angs,limb_pos)
+        reward = self.__compute_reward(
+            action,
+            new_state["pos"],
+            new_state["angs"],
+            new_state["limb_pos"])
         #done
         done = False
         info = ""
@@ -153,9 +158,9 @@ class CricketEnv(gym.Env):
         self.previous_reward = reward
         
 
-        return reward, [pos,angs,l_vel,a_vel,normal_forces,track_pos,limb_pos], done, info
+        return reward, np.fromiter(new_state.values(), dtype=float), done, info
     
-    def __compute_reward(self, action,pos,angs, limb_pos):
+    def __compute_reward(self,action,pos,angs,limb_pos):
         """Compute the reard based on the defined reward function"""
         # \mathcal{R}_t =-\sum_{i=0}^{no\_track}[\alpha_i(q_{t-1}^i)^2+\beta_i(q_{t-1}^i)^2+\kappa_i|\tau_{t-1}^i|+w_q^i(\Delta q_t^i)^2]-w_\varepsilon (\sum_{i=0}^5\gamma^i\varepsilon_{t-i})^2-w_tt-w_X(\Delta X)^2-w_Y(\Delta Y)^2-w_Z(\Delta Z)^2-w_\psi(\Delta \psi)^2-w_\theta(\Delta \theta)^2-w_\phi(\Delta \phi)^2
         reward = 0
@@ -178,7 +183,7 @@ class CricketEnv(gym.Env):
         # reward/penalty based on the direction of the last rotation
         for c, p_action in enumerate(self.previous_actions):
             # kappa_i|\tau_{t-1}^i|
-            if (action[c] <=0 and p_action <=0) or (action[c] > 0 and p_action > 0) :
+            if (action[c] <0 and p_action <0) or (action[c] > 0 and p_action > 0) or (p_action == 0):
                 # if the new action is following the old one --> reward
                 no_track_sum -= abs(p_action)
             else :
@@ -192,8 +197,7 @@ class CricketEnv(gym.Env):
         reward -= no_track_sum
 
         # The error ε represent the difference between the predicted Q(s,a) and the measured Q(s,a)
-        depth = 5
-        reward -= self.w_error * sum([self.disc_factor*err for err in self.pred_v_measured[:depth]])**2
+        reward -= self.w_error * sum([self.disc_factor*err for err in self.loss[:self.n_loss]])**2
 
         # time passed
         reward -= self.w_t * self.episode_step
@@ -210,6 +214,14 @@ class CricketEnv(gym.Env):
         reward -= self.w_sigma * (abs(f_ang[2]) - abs(angs[2]))**2
 
         return reward
+    
+    def current_state(self):
+        """Return the current state of the robot"""
+        pos,angs,l_vel,a_vel = self.cricket.get_observations()
+        track_pos, limb_pos = self.cricket.get_joint_positions()
+        normal_forces = self.cricket.get_normal_forces(self.planeUid)
+        loss_state = np.array(self.loss)
+        return [pos,angs,l_vel,a_vel,limb_pos,track_pos,normal_forces,loss_state]
 
     def __joint_penalty(self, id): # DELETE
         is_continous = p.getJointInfo(self.cricketUid,id)[8] == 0.0
@@ -229,10 +241,9 @@ class CricketEnv(gym.Env):
     def reset(self):
         ''' This function is used to reset the PyBullet environment '''
         self.step_counter = 0
-        p.resetSimulation()     # reset PyBullet environment
-        p.configureDebugVisualizer(p.COV_ENABLE_RENDERING,0) # we will enable rendering after we loaded everything
-
-
+        p.resetSimulation(self.client)     # reset PyBullet environment
+        p.configureDebugVisualizer(p.COV_ENABLE_RENDERING,1) # we will enable rendering after we loaded everything
+        p.setGravity(0,0,-9.81)
         # roba che mi serve (?)
         rest_poses = [range(np.random.uniform(-math.pi,math.pi,p.getNumJoints(self.cricketUid)))]
         # here you can set the position of the joints (randomly is good)
@@ -244,20 +255,14 @@ class CricketEnv(gym.Env):
 
         # init Cricket & goal
         self.goal = Goal()
-        self.previous_actions = np.zeros(shape=(,))
+        dim = len(self.cricket.get_action_limits())
+        self.previous_actions = np.zeros(shape=(dim,))
         self.episode_step = 0
-        self.pred_v_measured = []
-        self.previous_reward = - float('inf')
+        self.loss = [0]*self.n_loss
+        self.previous_reward = - np.inf
         self.early_stop = 0
-
-        # Che è sta robba zi?
-        state_object= [random.uniform(0.5,0.8),random.uniform(-0.2,0.2),0.05]
-        self.objectUid = p.loadURDF(os.path.join(urdfRootPath, "random_urdfs/000/000.urdf"), basePosition=state_object)
-        state_robot = p.getLinkState(self.pandaUid, 11)[0]
-        state_fingers = (p.getJointState(self.pandaUid,9)[0], p.getJointState(self.pandaUid, 10)[0])
-        self.observation = state_robot + state_fingers
-        p.configureDebugVisualizer(p.COV_ENABLE_RENDERING,1)
-        return np.array(self.observation).astype(np.float32)
+       
+        return np.array(self.current_state()).astype(np.float32)
 
 
     def render(self, mode='human'):
@@ -294,3 +299,6 @@ class CricketEnv(gym.Env):
         '''
         self.np_random, seed = gym.utils.seeding.np_random(seed)
         return [seed]
+
+    def push_loss(self, loss):
+        self.loss.append(loss)
