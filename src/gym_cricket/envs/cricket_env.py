@@ -7,7 +7,6 @@ import pybullet as p
 import pybullet_data
 import math
 import numpy as np
-import random
 from gym_cricket.assests.cricketGoal import CricketGoal
 from gym_cricket.assests.cricket import Cricket
 """
@@ -25,29 +24,16 @@ https://www.etedal.net/2020/04/pybullet-panda_2.html
 https://github.com/BarisYazici/deep-rl-grasping
 file:///home/andrea/Desktop/repo_interest/deep-rl-grasping/final_report.pdf
 """
-
-
-'''
-TODO:
-Bro, qua di lavoro ce ne, io ti direi di ridaere una letta a quello che hai scritto
-perche' il ragazzone maggiolino fa il fenomeno ma compie movimenti in 2D
-
-Ad ogni modo dovrebbe essere tutto corretto dato che non abbiamo ancora lavorato a nessuna
-parte delicata del codice (aka lo step e forse il render), tu riguarda nel dubbio
-
-quindi mi concnetrerei sullo sviluppo dello step, che, in realta', dovrebbe anche considerare
-le reti neurali che dovresti implementare sooner or later
-'''
-
 class CricketEnv(gym.Env):
     '''
-    Gym environment used by the cricket robot to train it self
+    Gym environment for cricket robot (and similar)
     '''
     metadata = {'render.modes': ['human']}
 
     def __init__(self):
         self.n_loss = 5
-        gravity = -9.81
+        self.gravity = -9.81
+        self.goal = None
 
         self.client = p.connect(p.GUI) # connect to PyBullet using GUI
         # Reduce length of episodes for RL algorithms
@@ -75,20 +61,20 @@ class CricketEnv(gym.Env):
         high_ang = np.pi * np.ones(3)
         low_ang = - high_ang
         ## velocity linear and angular
-        high_vel = np.concatenate(self.cricket.max_lvel,self.cricket.max_avel)
-        low_vel = np.concatenate(self.cricket.min_lvel,self.cricket.min_avel)
+        high_vel = np.concatenate((self.cricket.max_lvel,self.cricket.max_avel))
+        low_vel = np.concatenate((self.cricket.min_lvel,self.cricket.min_avel))
         ## leg joints
         high_leg, low_leg = self.cricket.get_joint_limits()
         ## tracks
         high_track, low_track = self.cricket.get_track_limits()
         ## normal forces
-        high_nf,low_nf = self.cricket.get_normal_forces_limits(gravity)
+        high_nf,low_nf = self.cricket.get_normal_forces_limits(self.gravity)
         ## Computed Loss
         high_loss, low_loss = np.full((self.n_loss,), np.inf), np.zeros((self.n_loss,))
         # Let's describe the format of valid actions and observations.
         self.observation_space = spaces.Box(
-            low=np.array(np.concatenate(low_pos,low_ang,low_vel,low_leg,low_track,low_nf,low_loss), dtype=np.float32),
-            high=np.array(np.concatenate(high_pos,high_ang,high_vel,high_leg,high_track,high_nf,high_loss), dtype=np.float32))
+            low=np.array(np.concatenate((low_pos,low_ang,low_vel,low_leg,low_track,low_nf,low_loss)), dtype=np.float32),
+            high=np.array(np.concatenate((high_pos,high_ang,high_vel,high_leg,high_track,high_nf,high_loss)), dtype=np.float32))
         
         # Defining ACTION space A.K.A. NN outputs
         high_lim, low_lim = self.cricket.get_action_limits()
@@ -132,6 +118,10 @@ class CricketEnv(gym.Env):
          - done     : Boolean
          - info     : string
         """
+        if self.goal == None :
+            raise ValueError("Robot's goal not defined.\
+                \n\nUse the function \"set_goal(goal)\"")
+
         self.episode_step += 1
         self.cricket.perform_action(action)
         # new state
@@ -157,7 +147,6 @@ class CricketEnv(gym.Env):
             self.early_stop = 0
         self.previous_reward = reward
         
-
         return reward, np.fromiter(new_state.values(), dtype=float), done, info
     
     def __compute_reward(self,action,pos,angs,limb_pos):
@@ -197,17 +186,19 @@ class CricketEnv(gym.Env):
         reward -= no_track_sum
 
         # The error ε represent the difference between the predicted Q(s,a) and the measured Q(s,a)
-        reward -= self.w_error * sum([self.disc_factor*err for err in self.loss[:self.n_loss]])**2
+        reward -= self.w_error * sum([self.disc_factor * err for err in self.loss[-self.n_loss:]])**2
 
         # time passed
         reward -= self.w_t * self.episode_step
 
         # difference with the robot's final center of mass position and body rotation
         f_pos, f_ang = self.goal.get_final_observation()
+
         # center of mass
         reward -= self.w_X * (abs(f_pos[0]) - abs(pos[0]))**2
         reward -= self.w_Y * (abs(f_pos[1]) - abs(pos[1]))**2
         reward -= self.w_Z * (abs(f_pos[2]) - abs(pos[2]))**2
+        
         # tortion
         reward -= self.w_psi   * (abs(f_ang[0]) - abs(angs[0]))**2
         reward -= self.w_theta * (abs(f_ang[1]) - abs(angs[1]))**2
@@ -243,18 +234,14 @@ class CricketEnv(gym.Env):
         self.step_counter = 0
         p.resetSimulation(self.client)     # reset PyBullet environment
         p.configureDebugVisualizer(p.COV_ENABLE_RENDERING,1) # we will enable rendering after we loaded everything
-        p.setGravity(0,0,-9.81)
+        p.setGravity(0,0,self.gravity)
         
-        rest_poses = [range(np.random.uniform(-math.pi,math.pi,p.getNumJoints(self.cricketUid)))]
+        rest_poses = np.random.uniform(-math.pi,math.pi,p.getNumJoints(self.cricketUid))
         # here you can set the position of the joints (randomly is good)
         for i in range(p.getNumJoints(self.cricketUid)):
             p.resetJointState(self.cricketUid,i, rest_poses[i]) # (bodyID, JointIndex,targetValue,targetVel, physicsClient)
 
-        # set the final state of the cricket robot
-        goal_state = [] # inserisci la posizione finale di tutti i joint che ti occorrono + la posizione e l'orientation 
-
         # init Cricket & goal
-        self.goal = CricketGoal()
         dim = len(self.cricket.get_action_limits())
         self.previous_actions = np.zeros(shape=(dim,))
         self.episode_step = 0
@@ -263,7 +250,6 @@ class CricketEnv(gym.Env):
         self.early_stop = 0
        
         return np.array(self.current_state()).astype(np.float32)
-
 
     def render(self, mode='human'):
         view_matrix = p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[0.7,0,0.05],
@@ -286,6 +272,7 @@ class CricketEnv(gym.Env):
         rgb_array = np.reshape(rgb_array, (720,960, 4))
 
         rgb_array = rgb_array[:, :, :3]
+
         return rgb_array
 
     def close(self):
@@ -299,6 +286,12 @@ class CricketEnv(gym.Env):
         '''
         self.np_random, seed = gym.utils.seeding.np_random(seed)
         return [seed]
+
+    def set_goal(self, joint_position, base_position = None):
+        if base_position == None :
+            self.goal = CricketGoal(joint_position, self.planeUid)
+        else :
+            self.goal = CricketGoal(joint_position, self.planeUid, base_position)
 
     def push_loss(self, loss):
         self.loss.append(loss)

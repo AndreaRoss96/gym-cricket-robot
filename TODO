@@ -6,9 +6,9 @@ CricketEnv:
  - @FATTO implement (copia) close
 
 Goal: --> suggerimento: guarda alle funzioni che ho scritto per finta nell'env
- - in order to compute the reward function, we need to implement tha class GOAL,
+ - @FATTO in order to compute the reward function, we need to implement tha class GOAL,
    which can be represented as another class Cricket (not environment) with a certain
    angle for the joints
 
 Neural Networks:
- - need to implement both the actor and critic Networks
+ - @FATTO need to implement both the actor and critic Networks

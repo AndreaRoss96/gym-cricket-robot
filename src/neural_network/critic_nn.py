@@ -12,9 +12,10 @@ def fanin_init(size, fanin=None):
     return torch.Tensor(size).uniform_(-v, v)
 
 class Critic(nn.Module):
-    def __init__(self, obs_dim, action_dim, terrain_dim, terrain_output, hidden_layers = [400,300,200], conv_layers = [], kernel_sizes = [150,100,50], action_features_out = 5, init_w=3e-3):
+    def __init__(self, obs_dim, action_dim, terrain_dim, terrain_output, hidden_layers = [400,300,200], conv_layers = [], kernel_sizes = [150,100,50], action_features_out = 5, output_critic = None, init_w=3e-3):
         super(Critic, self).__init__()
-        
+        if output_critic == None:
+            output_critic = round(action_dim/2)
         # State features
         self.obs_dim = obs_dim
         self.action_dim = action_dim
@@ -25,7 +26,8 @@ class Critic(nn.Module):
             if (i + 1) < len(hidden_layers):
                 self.layers.append(nn.Linear(hidden_layers[i],hidden_layers[i+1]))
             else :
-                self.layers.append(nn.Linear(hidden_layers[i] + terrain_output**2 + action_features_out, round(action_dim/2)))
+                # self.layers.append(nn.Linear(hidden_layers[i] + terrain_output**2 + action_features_out, round(action_dim/2)))
+                self.output_layer = nn.Linear(hidden_layers[i] + terrain_output**2 + action_features_out, output_critic)
         self.init_weights(init_w)
 
         # Terrain features
@@ -55,7 +57,7 @@ class Critic(nn.Module):
     def forward(self, observations, terrain, action):
         # observation forward
         out = self.layers[0](observations)
-        for layer in self.layers[1:-1]:
+        for layer in self.layers[1:]:
             out = nn.ReLU()(out)
             out = layer(out)
 
@@ -73,7 +75,8 @@ class Critic(nn.Module):
         out = torch.cat((out,out_t,out_a))
 
         # output layer
-        out = self.layers[-1](out)
+        # out = self.layers[-1](out)
+        out = self.output_layer(out)
         out = nn.ReLU()(out)
 
         return out.mean()

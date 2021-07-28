@@ -13,7 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/...",
     packages=setuptools.find_packages(include="gym_panda*"),
-    install_requires=['gym', 'pybullet', 'numpy', 'torch'],  # And any other dependencies foo needs
+    install_requires=['gym', 'pybullet', 'numpy', 'torch', 'pywavefront', 'matplotlib'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

@@ -157,7 +157,11 @@ class Cricket:
         return self.cricket, self.client
     
     def get_joint_ids(self):
-        '''Return the joints indexes (track, limb, fixed)'''
+        '''Return the joints indexes:
+         - track
+         - limb
+         - fixed
+        '''
         return self.track_ids,\
             self.limb_ids, self.fixed_ids
 
@@ -216,7 +220,7 @@ class Cricket:
         return np.array(track_joints, dtype=object), np.array(track_ids, dtype=object),\
                 np.array(limb_joints, dtype=object), np.array(limb_ids, dtype=object),\
                  np.array(fixed_joints, dtype=object), np.array(fixed_ids, dtype=object),\
-                  np.array(cont_ids, dtype=object),np.array(revo_ids, dtype=object)
+                  np.array(cont_ids, dtype=object), np.array(revo_ids, dtype=object)
     
     def get_joint_positions(self):
         """
@@ -299,7 +303,7 @@ class Cricket:
         return np.array(high_lim), np.array(low_lim)
 
     def get_track_limits(self):
-        high_lim, low_lim = np.full((4,), np.pi), np.full((4,),-np.full)
+        high_lim, low_lim = np.full((4,), np.pi), np.full((4,),-np.pi)
         return high_lim,low_lim
 
     def get_normal_forces_limits(self,gravity):
