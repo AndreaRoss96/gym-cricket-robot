@@ -9,8 +9,13 @@ import pybullet_data
 from gym_cricket.assests.cricket import Cricket
 
 physicsClient = p.connect(p.GUI)
-angle = p.addUserDebugParameter('Steering', -0.5, 0.5, 0)
-throttle = p.addUserDebugParameter('Throttle', 0, 20, 0)
+# angle = p.addUserDebugParameter('Steering', -0.5, 0.5, 0)
+# throttle = p.addUserDebugParameter('Throttle', 0, 20, 0)
+p.resetDebugVisualizerCamera(
+    cameraDistance=1.5,
+    cameraYaw=0,
+    cameraPitch=-40,
+    cameraTargetPosition=[0.55,-0.35,0.2])
 
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 p.setGravity(0,0,-9.81, physicsClientId=physicsClient) 
@@ -101,16 +106,19 @@ counter = 0
 flag = True
 mvm_ = 0
 while True:
-    user_angle = p.readUserDebugParameter(angle)
-    user_throttle = p.readUserDebugParameter(throttle)
-    for joint_index in wheel_indices:
-        p.setJointMotorControl2(robot_id, joint_index,
-                                p.VELOCITY_CONTROL,
-                                targetVelocity=user_throttle)
-    for joint_index in wheel_indices:
-        p.setJointMotorControl2(robot_id, joint_index,
-                                p.POSITION_CONTROL, 
-                                targetPosition=user_angle)
+    print("*-*"*40)
+    print(robot.get_normal_forces(planeId))
+    print("*-*"*40)
+    # user_angle = p.readUserDebugParameter(angle)
+    # user_throttle = p.readUserDebugParameter(throttle)
+    # for joint_index in wheel_indices:
+    #     p.setJointMotorControl2(robot_id, joint_index,
+    #                             p.VELOCITY_CONTROL,
+    #                             targetVelocity=user_throttle)
+    # for joint_index in wheel_indices:
+    #     p.setJointMotorControl2(robot_id, joint_index,
+    #                             p.POSITION_CONTROL, 
+    #                             targetPosition=user_angle)
     counter +=1
 
     #print(f'observation: {robot.get_observations()}')

@@ -6,21 +6,23 @@ import torch.nn.functional as F
 # from neural_network.actor_nn import Actor_nn
 # from neural_network.critic_nn import Critic_nn
 from utils.buffer import Buffer
+from utils.util import *
 
 # https://spinningup.openai.com/en/latest/algorithms/ddpg.html#:~:text=Background,-(Previously%3A%20Introduction%20to&text=Deep%20Deterministic%20Policy%20Gradient%20(DDPG,function%20to%20learn%20the%20policy.
 # https://github.com/ghliu/pytorch-ddpg/blob/master/ddpg.py
 # https://towardsdatascience.com/deep-deterministic-policy-gradients-explained-2d94655a9b7b
 
 class DDPG:
-    def __init__(self, env, actor, critic, actor_target, critic_target, gamma=0.99, tau=1e-2, buffer_maxlen=50000, critic_learning_rate=1e-3, actor_learning_rate=1e-4):
+    def __init__(self, env, actor, critic, actor_target, critic_target, terrain, gamma=0.99, tau=1e-2, buffer_maxlen=50000, critic_learning_rate=1e-3, actor_learning_rate=1e-4):
         """
         params:
          - env : gym environment
          - gamma : 
-
         """
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+        # self.terrain = torch.FloatTensor(terrain).unsqueeze(0).to(self.device)
+        self.terrain = terrain
         self.env = env
         # self.obsv_space = env.observation_space.shape[0]
         # self.action_space = env.action_space.shape[0]
@@ -38,21 +40,27 @@ class DDPG:
         self.critic = critic
         self.actor_target = actor_target
         self.critic_target = critic_target
-        
+
         # optimizers
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=critic_learning_rate)
         self.actor_optimizer  = optim.Adam(self.actor.parameters(), lr=actor_learning_rate)
-    
+        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=critic_learning_rate)
+
+        hard_update(self.actor_target, self.actor) # Make sure target is with the same weight
+        hard_update(self.critic_target, self.critic)
+        
         self.replay_buffer = Buffer(buffer_maxlen)
 
-    def get_action(self, obs, terrain):
+        if USE_CUDA: self.cuda()
+
+    def get_action(self, obs):
         state = torch.FloatTensor(obs).unsqueeze(0).to(self.device)
+        terrain = torch.FloatTensor(self.terrain).unsqueeze(0).to(self.device)
         action = self.actor.forward(state, terrain)
         action = action.squeeze(0).cpu().detach().numpy()
 
         return action
     
-    def update(self, batch_size, terrain):
+    def update(self, batch_size):
         state_batch, action_batch, reward_batch, next_state_batch, masks = self.replay_buffer.sample(batch_size)
         state_batch = torch.FloatTensor(state_batch).to(self.device)
         action_batch = torch.FloatTensor(action_batch).to(self.device)
@@ -61,9 +69,9 @@ class DDPG:
         masks = torch.FloatTensor(masks).to(self.device)
 
         # Critic loss
-        curr_Q = self.critic.forward(state_batch, terrain, action_batch)
+        curr_Q = self.critic.forward(state_batch, self.terrain, action_batch)
         next_actions = self.actor_target.forward(next_state_batch)
-        next_Q = self.critic_target.forward(next_state_batch, terrain, next_actions.detach())
+        next_Q = self.critic_target.forward(next_state_batch, self.terrain, next_actions.detach())
         expected_Q = reward_batch + self.gamma * next_Q
         q_loss = F.mse_loss(curr_Q, expected_Q.detach()) # critic loss
         self.env.push_loss(q_loss)
@@ -74,7 +82,7 @@ class DDPG:
         self.critic_optimizer.step()
 
         # actor loss
-        policy_loss = -self.critic.forward(state_batch, terrain, self.actor.forward(state_batch)).mean()
+        policy_loss = -self.critic.forward(state_batch, self.terrain, self.actor.forward(state_batch)).mean()
         
         # update actor network
         self.actor_optimizer.zero_grad()
@@ -87,7 +95,17 @@ class DDPG:
        
         for target_param, param in zip(self.critic_target.parameters(), self.critic.parameters()):
             target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
-
+        
+    def cuda(self):
+        self.actor.cuda()
+        self.actor_target.cuda()
+        self.critic.cuda()
+        self.critic_target.cuda()
+    
+    def seed(self,s):
+        torch.manual_seed(s)
+        if USE_CUDA:
+            torch.cuda.manual_seed(s)
     # def __init_nn(self, num_states, num_actions):
     #     """
     #     initialize the target networks as copies of the original networks

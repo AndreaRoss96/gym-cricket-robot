@@ -36,23 +36,18 @@ class CricketEnv(gym.Env):
         self.goal = None
 
         self.client = p.connect(p.GUI) # connect to PyBullet using GUI
-        # Reduce length of episodes for RL algorithms
-        p.setTimeStep(1/30, self.client)
+
         # adjust the view angle of the environment
         p.resetDebugVisualizerCamera(
             cameraDistance=1.5,
             cameraYaw=0,
             cameraPitch=-40,
             cameraTargetPosition=[0.55,-0.35,0.2])
-        
-        urdfRootPath=pybullet_data.getDataPath()
-        
+
+        p.setAdditionalSearchPath(pybullet_data.getDataPath())        
         # Plane: to chose the plane I can do a script that changes the path to the desired 
-        self.planeUid = p.loadURDF(os.path.join(urdfRootPath,"plane.urdf"), basePosition=[0,0,-0.65])
-
+        self.planeUid = p.loadURDF("plane.urdf")
         self.cricket = Cricket(self.client)
-        self.cricketUid, _ = self.cricket.get_ids()
-
         # Defining OBSERVATION space A.K.A. NN inputs
         ## position X,Y,Z
         high_pos = np.inf * np.ones(3)
@@ -124,6 +119,7 @@ class CricketEnv(gym.Env):
 
         self.episode_step += 1
         self.cricket.perform_action(action)
+        p.stepSimluation(self.client)
         # new state
         state_keys = ["pos","angs","l_vel","a_vel","limb_pos","track_pos","normal_forces","loss_state"]
         current_state = self.current_state()
@@ -211,7 +207,7 @@ class CricketEnv(gym.Env):
         pos,angs,l_vel,a_vel = self.cricket.get_observations()
         track_pos, limb_pos = self.cricket.get_joint_positions()
         normal_forces = self.cricket.get_normal_forces(self.planeUid)
-        loss_state = np.array(self.loss)
+        loss_state = self.loss
         return [pos,angs,l_vel,a_vel,limb_pos,track_pos,normal_forces,loss_state]
 
     def __joint_penalty(self, id): # DELETE
@@ -232,24 +228,36 @@ class CricketEnv(gym.Env):
     def reset(self):
         ''' This function is used to reset the PyBullet environment '''
         self.step_counter = 0
-        p.resetSimulation(self.client)     # reset PyBullet environment
-        p.configureDebugVisualizer(p.COV_ENABLE_RENDERING,1) # we will enable rendering after we loaded everything
-        p.setGravity(0,0,self.gravity)
+
+        p.resetSimulation()     # reset PyBullet environment
+        p.configureDebugVisualizer(p.COV_ENABLE_RENDERING,0) # we will enable rendering after we loaded everything
         
-        rest_poses = np.random.uniform(-math.pi,math.pi,p.getNumJoints(self.cricketUid))
-        # here you can set the position of the joints (randomly is good)
-        for i in range(p.getNumJoints(self.cricketUid)):
-            p.resetJointState(self.cricketUid,i, rest_poses[i]) # (bodyID, JointIndex,targetValue,targetVel, physicsClient)
+        # Plane: to chose the plane I can do a script that changes the path to the desired 
+        self.planeUid = p.loadURDF("plane.urdf")
+        p.setGravity(0,0,self.gravity, physicsClientId=self.client)
+        # Reduce length of episodes for RL algorithms
+        p.setTimeStep(1/30, self.client)
+
+        # self.client = p.connect(p.GUI)
 
         # init Cricket & goal
+        self.cricket = Cricket(self.client)
+        self.cricketUid, _ = self.cricket.get_ids()
+
+        rest_poses = np.random.uniform(-math.pi,math.pi,p.getNumJoints(self.cricketUid))
+        # here you can set the position of the joints (randomly is good)
+        self.cricket.set_joint_position(rest_poses)
+        # for i in range(p.getNumJoints(self.cricketUid)):
+        #     p.resetJointState(self.cricketUid,i, rest_poses[i],physicsClientId=self.client) # (bodyID, JointIndex,targetValue,targetVel, physicsClient)
+
         dim = len(self.cricket.get_action_limits())
         self.previous_actions = np.zeros(shape=(dim,))
         self.episode_step = 0
-        self.loss = [0]*self.n_loss
+        self.loss = np.zeros((self.n_loss,), dtype=np.float32)
         self.previous_reward = - np.inf
         self.early_stop = 0
        
-        return np.array(self.current_state()).astype(np.float32)
+        return self.current_state()
 
     def render(self, mode='human'):
         view_matrix = p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[0.7,0,0.05],
@@ -292,6 +300,8 @@ class CricketEnv(gym.Env):
             self.goal = CricketGoal(joint_position, self.planeUid)
         else :
             self.goal = CricketGoal(joint_position, self.planeUid, base_position)
+        self.client = p.connect(p.GUI)
 
     def push_loss(self, loss):
-        self.loss.append(loss)
+        loss = np.array(loss, dtype=np.float32)
+        np.append(self.loss[-(self.n_loss-1):], loss) # append the loss to the list without exceding the limit number

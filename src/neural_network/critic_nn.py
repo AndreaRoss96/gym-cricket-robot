@@ -20,7 +20,7 @@ class Critic(nn.Module):
         self.obs_dim = obs_dim
         self.action_dim = action_dim
 
-        self.layers = []
+        self.layers = nn.ModuleList()
         self.layers.append(nn.Linear(self.obs_dim, hidden_layers[0]))
         for i in range(0, len(hidden_layers)):
             if (i + 1) < len(hidden_layers):
@@ -34,7 +34,7 @@ class Critic(nn.Module):
         self.terrain_dim = terrain_dim
         self.terrain_output = terrain_output
 
-        self.conv_layers = []
+        self.conv_layers = nn.ModuleList()
         if len(conv_layers) == 0 :
             self.conv_layers.append(nn.Conv3d(terrain_dim,terrain_output, kernel_sizes[0]))
         else :

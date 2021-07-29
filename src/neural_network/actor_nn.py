@@ -19,7 +19,7 @@ class Actor(nn.Module):
         self.obs_dim = obs_dim
         self.action_dim = action_dim
 
-        self.layers = []
+        self.layers = nn.ModuleList()
         self.layers.append(nn.Linear(self.obs_dim, hidden_layers[0]))
         for i in range(0, len(hidden_layers)):
             if (i + 1) < len(hidden_layers):
@@ -27,12 +27,13 @@ class Actor(nn.Module):
             else :
                 self.layers.append(nn.Linear(hidden_layers[i] + terrain_output**2, self.action_dim))
         self.init_weights(init_w)
+        # self.layers = nn.ParameterList(self.layers)
 
         # Terrain features
         self.terrain_dim = terrain_dim
         self.terrain_output = terrain_output
 
-        self.conv_layers = []
+        self.conv_layers = nn.ModuleList()
         if len(conv_layers) == 0 :
             self.conv_layers.append(nn.Conv3d(terrain_dim,terrain_output, kernel_sizes[0]))
         else :
@@ -43,14 +44,16 @@ class Actor(nn.Module):
                 else :
                     self.conv_layers.append(nn.Conv3d(conv_layers[i], self.terrain_output, kernel_sizes[i])) 
 
-
     def init_weights(self, init_w):
         for layer in self.layers[:-1]:
             layer.weight.data = fanin_init(layer.weight.data.size())
         self.layers[-1].weight.data.uniform_(-init_w, init_w)
 
-
     def forward(self, observations, terrain):
+        print('IIIIIIIIIIIIIIIII'*1000)
+        print(observations)
+        print()
+        print(terrain)
         # action forward
         out = self.layers[0](observations)
         for layer in self.layers[1:-1]:

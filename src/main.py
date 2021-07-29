@@ -34,10 +34,10 @@ terrain = np.reshape(terrain, (4,3,1,1,1))
 terrain = torch.FloatTensor(terrain)
 
 # Initialize neural networks
-actor, critic, actor_target, critic_target = init_nn(env,terrain)
+actor, critic, actor_target, critic_target = init_nn(env,terrain,kernel_sizes=[1])
 
 # Initialize DDPG 
-ddpg = DDPG(env, actor, critic, actor_target, critic_target)
+ddpg = DDPG(env, actor, critic, actor_target, critic_target, terrain)
 
 for episode in range(num_episodes):
     state = env.reset()
@@ -45,13 +45,14 @@ for episode in range(num_episodes):
     episode_reward = 0
 
     for step in range(step_per_episode):
+        state = [elem for sub_obs in state for elem in [*sub_obs]] # unpacking the elements from the format returned by cricket env
         action = ddpg.get_action(state) # invoke the actor nn to generate an action (compute forward)
         action = noise.get_action(action,step)
         reward, new_state, done, info = env.step(action)
         ddpg.replay_buffer.push(state,action,reward,new_state,done)
 
         if len(ddpg.replay_buffer) > batch_size :
-            ddpg.update(batch_size,terrain)
+            ddpg.update(batch_size)
 
         state = new_state
         episode_reward += reward

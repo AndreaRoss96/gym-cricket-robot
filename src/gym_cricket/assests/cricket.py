@@ -34,7 +34,7 @@ class Cricket:
                     self.cont_ids, self.revo_ids = self.__find_joints()   # completes the above joint lists 
         
         num_wheel = 8
-        num_tracks = len(self.track_joints)
+        num_tracks = len(self.track_ids)
         num_joints = len(self.limb_ids)
         
         #Starting positions
@@ -44,7 +44,7 @@ class Cricket:
         else :
             self.track_positions = np.array(strating_position[:num_wheel])
             self.limb_positions = np.array(strating_position[num_wheel:])
-        
+
         for joint_id, joint_pos in zip(self.limb_ids, self.limb_positions):
             p.resetJointState(
                 self.cricket,
@@ -82,6 +82,11 @@ class Cricket:
             aa, bb = p.getAABB(self.cricket,i,self.client) # return the bounding box of the body (-1) starting from the center of mass
             obs = p.getOverlappingObjects(aa, bb, self.client)
             self.collision_safe.update({i : sorted(obs)})
+    
+    def set_joint_position(self, positions):
+        for i in range(p.getNumJoints(self.cricket)):
+            p.resetJointState(self.cricket, i, positions[i], physicsClientId = self.client)
+
 
     def perform_action(self, action):
         '''
@@ -92,14 +97,14 @@ class Cricket:
 
         Domanda: should I need to add the acceleration of the tortion as well?
 
-        action:non voglio essere nell'intreccio delle loro vite wathcman dr manhattan
+        action:
             0-3 the value of the tracks movement 
             4... the tortion of all the other joints
         '''
         angles = action[:,0]
         velocities = action [:,1]
         """
-        SOLUZZIONE PROPOSTA:
+        SOLUZIONE PROPOSTA:
         Si performa un'azione per uno specifico time stemp (like frame to frame),
         Quando il tempo termina, si valutano i risultati (reward, reti and so on), e si genera una nuova azione
         """
@@ -278,17 +283,31 @@ class Cricket:
          - a list of 4 lists (one per track) of normal forces, for each list:
             4 normal forces along the wheels and the track between the wheels
         """
-        for wheel_1,wheel_2 in self.track_ids:
-            track_id = wheel_1 + 1
-            contact_points = [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=wheel_1)]
-            contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=wheel_2)]
-            contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=track_id)]
+        # print(f'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> {self.track_ids}')
+        # for wheel_1,wheel_2 in self.track_ids:
+        #     track_id = wheel_1 + 1
+        #     contact_points = [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=wheel_1)]
+        #     contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=wheel_2)]
+        #     contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=track_id)]
 
-            if len(contact_points) < self.n_normal_f:
-                contact_points += [0] * (self.n_normal_f - len(contact_points))
+        #     if len(contact_points) < self.n_normal_f :
+        #         contact_points += [0] * (self.n_normal_f - len(contact_points))
+        #     elif len(contact_points) > self.n_normal_f :
+        #         contact_points = sorted(contact_points, reverse=True)[:self.n_normal_f]
+        
+        contact_points = []
+        for count, wheel_id in enumerate(self.track_ids):
+            contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=wheel_id)]
+
+            if count + 1 % 2 != 0 : # update trackId once each two iterations
+                track_id = wheel_id + 1
+                contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=track_id)]
+
+            if len(contact_points) < self.n_normal_f :
+                contact_points += [0.0] * (self.n_normal_f - len(contact_points))
             elif len(contact_points) > self.n_normal_f :
                 contact_points = sorted(contact_points, reverse=True)[:self.n_normal_f]
-            
+
             return contact_points
 
     def get_joint_limits(self):
