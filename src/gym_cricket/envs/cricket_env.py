@@ -46,7 +46,7 @@ class CricketEnv(gym.Env):
 
         p.setAdditionalSearchPath(pybullet_data.getDataPath())        
         # Plane: to chose the plane I can do a script that changes the path to the desired 
-        self.planeUid = p.loadURDF("plane.urdf")
+
         self.cricket = Cricket(self.client)
         # Defining OBSERVATION space A.K.A. NN inputs
         ## position X,Y,Z
@@ -73,9 +73,12 @@ class CricketEnv(gym.Env):
         
         # Defining ACTION space A.K.A. NN outputs
         high_lim, low_lim = self.cricket.get_action_limits()
+        high_vel_lim, low_vel_lim = self.cricket.get_action_velocities_limits()
+        low = np.array(np.concatenate((low_lim, low_vel_lim)), dtype=np.float32)
+        high = np.array(np.concatenate((high_lim, high_vel_lim)), dtype=np.float32)
         self.action_space = spaces.Box(
-            low=np.array(high_lim, dtype=np.float32),
-            high=np.array(low_lim, dtype=np.float32))
+            low=low,
+            high=high)
         self.np_random, _ = gym.utils.seeding.np_random()
 
         self.reset()
@@ -86,7 +89,7 @@ class CricketEnv(gym.Env):
                           w_sigma = 0.5):
         """Set the costants used in the reward function"""
         if w_joints == None :
-            _, limb_joints, _ = self.cricket.get_joint_ids
+            _, limb_joints, _ = self.cricket.get_joint_ids()
             num_limb_joints = len(limb_joints)
             self.w_joints = np.full((num_limb_joints,), 1)
         else :
@@ -119,9 +122,10 @@ class CricketEnv(gym.Env):
 
         self.episode_step += 1
         self.cricket.perform_action(action)
-        p.stepSimluation(self.client)
+        p.stepSimulation(self.client)
         # new state
-        state_keys = ["pos","angs","l_vel","a_vel","limb_pos","track_pos","normal_forces","loss_state"]
+        state_keys = ["pos","angs","l_vel","a_vel","limb_pos",\
+                        "track_pos","normal_forces","loss_state"]
         current_state = self.current_state()
         new_state = dict(zip(state_keys,current_state))
         # reward
@@ -142,8 +146,8 @@ class CricketEnv(gym.Env):
         else :
             self.early_stop = 0
         self.previous_reward = reward
-        
-        return reward, np.fromiter(new_state.values(), dtype=float), done, info
+
+        return reward, current_state, done, info
     
     def __compute_reward(self,action,pos,angs,limb_pos):
         """Compute the reard based on the defined reward function"""
@@ -156,13 +160,14 @@ class CricketEnv(gym.Env):
         self_collisions = self.cricket.get_joint_collisions()
         for id,coll in self_collisions.items() :
             index = np.where(limb_ids == id)
-            no_track_sum += (limb_pos[index])**2
+            no_track_sum += (limb_pos[index[0][0]])**2
             #no_track_sum += self.__joint_penalty(id)**2 # alpha_i(q_{t-1}^i)^2
         
         # Penalty if the robot touches the environment
         if p.getContactPoints(self.cricketUid,self.planeUid,linkIndexA=-1): # not empty
             for id in limb_ids:
-                no_track_sum += (limb_pos[index])**2
+                index = np.where(limb_ids == id)
+                no_track_sum += (limb_pos[index[0][0]])**2
                 #no_track_sum += self.__joint_penalty(id)**2 # beta_i(q_{t-1}^i)^2
         
         # reward/penalty based on the direction of the last rotation
@@ -176,8 +181,9 @@ class CricketEnv(gym.Env):
                 no_track_sum += abs(p_action)
 
         # Difference with the joints final position
+        cazzo = self.goal.get_final_joints()
         diff = [(abs(limb) - abs(f_limb))**2 for limb, f_limb in zip(limb_pos,self.goal.get_final_joints())]
-        no_track_sum += self.w_joints * sum(diff) # w_q^i(\Delta q_t^i)^2
+        no_track_sum += np.dot(self.w_joints,diff) # w_q^i(\Delta q_t^i)^2
 
         reward -= no_track_sum
 
@@ -297,10 +303,9 @@ class CricketEnv(gym.Env):
 
     def set_goal(self, joint_position, base_position = None):
         if base_position == None :
-            self.goal = CricketGoal(joint_position, self.planeUid)
+            self.goal = CricketGoal(joint_position, self.gravity)
         else :
-            self.goal = CricketGoal(joint_position, self.planeUid, base_position)
-        self.client = p.connect(p.GUI)
+            self.goal = CricketGoal(joint_position, self.gravity, base_position = base_position)
 
     def push_loss(self, loss):
         loss = np.array(loss, dtype=np.float32)

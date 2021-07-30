@@ -1,10 +1,11 @@
 import numpy as np
 import pybullet as p
-
+import pybullet_data
+import time 
 from gym_cricket.assests.cricket import Cricket
 
 class CricketGoal(Cricket):
-    def __init__(self, joint_position, planeId, client= None, base_position = [0,0,0.5]) -> None:
+    def __init__(self, joint_position, gravity, client= None, base_position = [0,0,0.5]) -> None:
         """
         Define the optimal final position for the robot.
 
@@ -14,14 +15,18 @@ class CricketGoal(Cricket):
          - planeId : int -> pyBullet uniwue Id for the robot
                 Used to understand the normal forces
          - client
-                Simulation client
+                Simulation client -> change it for debug
         """
-        if not isinstance(planeId,int):
-            raise ValueError("PlaneId needs to be an integer")
+        # if not isinstance(planeId,int):
+        #     raise ValueError("PlaneId needs to be an integer")
 
         if client == None :
             client = p.connect(p.DIRECT)
         super().__init__(client=client, strating_position=joint_position, base_position=base_position)
+
+        p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        planeId = p.loadURDF("plane.urdf",physicsClientId=self.client)
+        p.setGravity(0,0,gravity, physicsClientId=self.client)
 
         for _ in range(0,100):
             p.stepSimulation()
@@ -32,7 +37,7 @@ class CricketGoal(Cricket):
         f_pos,f_angs,_,_ = self.get_observations()
         self.final_pos = f_pos
         self.final_angs = f_angs
-        p.disconnect()
+        # p.disconnect(client)
 
     def get_final_joints(self):
         return self.final_limb

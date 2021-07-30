@@ -26,12 +26,13 @@ limbs = [0.0, -np.pi/2, np.pi, -np.pi/2, 0.0, np.pi/2,\
     np.pi/2, np.pi, np.pi/2, 0.0, 0.0]
 goals = np.concatenate([wheels,limbs])
 env.set_goal(joint_position=goals)
+env.set_reward_values()
 
 # Set the terrain @TODO read this from a file
 scene = pw.Wavefront('/home/andrea/Downloads/flat.obj')
 terrain = np.array(scene.vertices)
 terrain = np.reshape(terrain, (4,3,1,1,1))
-terrain = torch.FloatTensor(terrain)
+# terrain = torch.FloatTensor(terrain)
 
 # Initialize neural networks
 actor, critic, actor_target, critic_target = init_nn(env,terrain,kernel_sizes=[1])

@@ -47,7 +47,7 @@ class DDPG:
 
         hard_update(self.actor_target, self.actor) # Make sure target is with the same weight
         hard_update(self.critic_target, self.critic)
-        
+
         self.replay_buffer = Buffer(buffer_maxlen)
 
         if USE_CUDA: self.cuda()
@@ -55,7 +55,7 @@ class DDPG:
     def get_action(self, obs):
         state = torch.FloatTensor(obs).unsqueeze(0).to(self.device)
         terrain = torch.FloatTensor(self.terrain).unsqueeze(0).to(self.device)
-        action = self.actor.forward(state, terrain)
+        action = self.actor.forward(state, terrain[0])
         action = action.squeeze(0).cpu().detach().numpy()
 
         return action

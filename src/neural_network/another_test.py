@@ -35,7 +35,25 @@ for elem in cazzo:
     tmp += [*elem]
 
 cazzo = [z for elem in cazzo for z in [*elem]]
-print(f'cazzo {cazzo}')
+# print(f'cazzo {cazzo}')
 i = [*a, *b, *c, *d, *e, *f, *g, *h]
 i = torch.tensor(i)
-print(i)
+# print(i)
+
+
+a = torch.tensor([[[[[[ 15.]]],
+          [[[  0.]]],
+          [[[ 15.]]]],
+         [[[[ 15.]]],
+          [[[  0.]]],
+          [[[-15.]]]],
+         [[[[-15.]]],
+          [[[  0.]]],
+         [[[-15.]]]],
+         [[[[-15.]]],
+          [[[  0.]]],
+          [[[ 15.]]]]]], device='cuda:0')
+
+print(a.shape)
+print(a[0])
+print(a[0].shape)

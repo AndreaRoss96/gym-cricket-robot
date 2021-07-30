@@ -50,16 +50,16 @@ class Actor(nn.Module):
         self.layers[-1].weight.data.uniform_(-init_w, init_w)
 
     def forward(self, observations, terrain):
-        print('IIIIIIIIIIIIIIIII'*1000)
-        print(observations)
-        print()
-        print(terrain)
+        # print('IIIIIIIIIIIIIIIII'*1000)
+        # print(observations)
+        # print()
+        # print(terrain)
         # action forward
         out = self.layers[0](observations)
         for layer in self.layers[1:-1]:
             out = nn.ReLU()(out)
             out = layer(out)
-        print(f'out {out.shape}')
+        out=out[0]
 
         # terrain forward
         out_t = self.conv_layers[0](terrain)
@@ -68,7 +68,6 @@ class Actor(nn.Module):
             out_t = layer(out_t)
         
         out_t = torch.flatten(out_t)
-        print(f'out_t {out_t.shape}')
 
         # add layer
         out = torch.cat((out,out_t))
