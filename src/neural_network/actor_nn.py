@@ -12,7 +12,7 @@ def fanin_init(size, fanin=None):
     return torch.Tensor(size).uniform_(-v, v)
 
 class Actor(nn.Module):
-    def __init__(self, obs_dim, action_dim, terrain_dim, terrain_output, hidden_layers = [400,300,200], conv_layers = [], kernel_sizes = [150,100,50], init_w=3e-3):
+    def __init__(self, obs_dim, action_dim, terrain_dim, terrain_output, hidden_layers = [300,200,100], conv_layers = [], kernel_sizes = [150,100,50], init_w=3e-3):
         super(Actor, self).__init__()
         
         # State features
@@ -50,8 +50,8 @@ class Actor(nn.Module):
         self.layers[-1].weight.data.uniform_(-init_w, init_w)
 
     def forward(self, observations, terrain):
-        # print('IIIIIIIIIIIIIIIII'*1000)
-        # print(observations)
+        print('IIIIIIIIIIIIIIIII'*100)
+        print(terrain)
         # print()
         # print(terrain)
         # action forward
@@ -66,7 +66,6 @@ class Actor(nn.Module):
         for layer in self.conv_layers[1:]:
             out_t = nn.ReLU()(out_t)
             out_t = layer(out_t)
-        
         out_t = torch.flatten(out_t)
 
         # add layer

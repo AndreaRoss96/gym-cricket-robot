@@ -29,7 +29,7 @@ def init_nn(env, terrain, hidden_layers = [400,300,200], conv_layers = [], kerne
         kernel_sizes=kernel_sizes,
         init_w=init_w)
     critic = Critic(
-        num_states + num_actions,
+        num_states,
         num_actions,
         terrain_dim,
         terrain_output,
@@ -40,7 +40,7 @@ def init_nn(env, terrain, hidden_layers = [400,300,200], conv_layers = [], kerne
         output_critic = output_critic,
         init_w=init_w)
     critic_target = Critic(
-        num_states + num_actions,
+        num_states,
         num_actions,
         terrain_dim,
         terrain_output,

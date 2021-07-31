@@ -127,13 +127,14 @@ class CricketEnv(gym.Env):
         state_keys = ["pos","angs","l_vel","a_vel","limb_pos",\
                         "track_pos","normal_forces","loss_state"]
         current_state = self.current_state()
-        new_state = dict(zip(state_keys,current_state))
+        dict_state = dict(zip(state_keys,current_state))
+        current_state = self.__unpack_state(current_state)
         # reward
         reward = self.__compute_reward(
             action,
-            new_state["pos"],
-            new_state["angs"],
-            new_state["limb_pos"])
+            dict_state["pos"],
+            dict_state["angs"],
+            dict_state["limb_pos"])
         #done
         done = False
         info = ""
@@ -181,7 +182,6 @@ class CricketEnv(gym.Env):
                 no_track_sum += abs(p_action)
 
         # Difference with the joints final position
-        cazzo = self.goal.get_final_joints()
         diff = [(abs(limb) - abs(f_limb))**2 for limb, f_limb in zip(limb_pos,self.goal.get_final_joints())]
         no_track_sum += np.dot(self.w_joints,diff) # w_q^i(\Delta q_t^i)^2
 
@@ -263,7 +263,7 @@ class CricketEnv(gym.Env):
         self.previous_reward = - np.inf
         self.early_stop = 0
        
-        return self.current_state()
+        return self.__unpack_state(self.current_state())
 
     def render(self, mode='human'):
         view_matrix = p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[0.7,0,0.05],
@@ -310,3 +310,15 @@ class CricketEnv(gym.Env):
     def push_loss(self, loss):
         loss = np.array(loss, dtype=np.float32)
         np.append(self.loss[-(self.n_loss-1):], loss) # append the loss to the list without exceding the limit number
+
+    def __unpack_state(self, state):
+        """
+        Unpacking the elements from the format returned by cricket
+
+        Input: 
+            position, orientation,velocity,....
+            (x, y, z), (psi,omega,mu), (vx,vy,vz), ...
+        Return:
+            [x,y,z,psi,omega,mu,vx,vy,vz, ...]
+        """
+        return [elem for sub_obs in state for elem in [*sub_obs]]

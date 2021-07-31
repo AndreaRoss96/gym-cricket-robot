@@ -21,8 +21,9 @@ class DDPG:
         """
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        # self.terrain = torch.FloatTensor(terrain).unsqueeze(0).to(self.device)
-        self.terrain = terrain
+        self.terrain = torch.FloatTensor(terrain).unsqueeze(0).to(self.device)
+        self.terrain_full = None
+        #self.terrain = terrain
         self.env = env
         # self.obsv_space = env.observation_space.shape[0]
         # self.action_space = env.action_space.shape[0]
@@ -54,24 +55,31 @@ class DDPG:
 
     def get_action(self, obs):
         state = torch.FloatTensor(obs).unsqueeze(0).to(self.device)
-        terrain = torch.FloatTensor(self.terrain).unsqueeze(0).to(self.device)
-        action = self.actor.forward(state, terrain[0])
+        # terrain = torch.FloatTensor(self.terrain).unsqueeze(0).to(self.device)
+        action = self.actor.forward(state, self.terrain[0])
         action = action.squeeze(0).cpu().detach().numpy()
 
         return action
     
     def update(self, batch_size):
+        torch.cuda.empty_cache()
         state_batch, action_batch, reward_batch, next_state_batch, masks = self.replay_buffer.sample(batch_size)
         state_batch = torch.FloatTensor(state_batch).to(self.device)
         action_batch = torch.FloatTensor(action_batch).to(self.device)
         reward_batch = torch.FloatTensor(reward_batch).to(self.device)
         next_state_batch = torch.FloatTensor(next_state_batch).to(self.device)
         masks = torch.FloatTensor(masks).to(self.device)
+        # if self.terrain_full == None :
+        #     self.terrain_full = []
+        #     for _ in range(batch_size) :
+        #         #self.terrain_full = torch.cat((self.terrain_full, self.terrain))
+        #         self.terrain_full.append(self.terrain.cpu().numpy())
+            # self.terrain_full = torch.FloatTensor(self.terrain_full).to(self.device)
 
         # Critic loss
-        curr_Q = self.critic.forward(state_batch, self.terrain, action_batch)
-        next_actions = self.actor_target.forward(next_state_batch)
-        next_Q = self.critic_target.forward(next_state_batch, self.terrain, next_actions.detach())
+        curr_Q = self.critic.forward(state_batch, self.terrain[0], action_batch)
+        next_actions = self.actor_target.forward(next_state_batch, self.terrain[0])
+        next_Q = self.critic_target.forward(next_state_batch, self.terrain[0], next_actions.detach())
         expected_Q = reward_batch + self.gamma * next_Q
         q_loss = F.mse_loss(curr_Q, expected_Q.detach()) # critic loss
         self.env.push_loss(q_loss)
@@ -82,7 +90,7 @@ class DDPG:
         self.critic_optimizer.step()
 
         # actor loss
-        policy_loss = -self.critic.forward(state_batch, self.terrain, self.actor.forward(state_batch)).mean()
+        policy_loss = -self.critic.forward(state_batch, self.terrain, self.terrain_full.forward(state_batch)).mean()
         
         # update actor network
         self.actor_optimizer.zero_grad()
@@ -106,6 +114,28 @@ class DDPG:
         torch.manual_seed(s)
         if USE_CUDA:
             torch.cuda.manual_seed(s)
+
+    def load_weights(self, output):
+        if output is None: return
+
+        self.actor.load_state_dict(
+            torch.load('{}/actor.pkl'.format(output))
+        )
+
+        self.critic.load_state_dict(
+            torch.load('{}/critic.pkl'.format(output))
+        )
+
+
+    def save_model(self,output):
+        torch.save(
+            self.actor.state_dict(),
+            '{}/actor.pkl'.format(output)
+        )
+        torch.save(
+            self.critic.state_dict(),
+            '{}/critic.pkl'.format(output)
+        )
     # def __init_nn(self, num_states, num_actions):
     #     """
     #     initialize the target networks as copies of the original networks

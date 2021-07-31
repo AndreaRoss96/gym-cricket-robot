@@ -55,6 +55,12 @@ class Critic(nn.Module):
 
 
     def forward(self, observations, terrain, action):
+        print('IIIIIIIIIIIIIIIII'*100)
+        print(terrain)
+        print(terrain.shape)
+        #x, a = observations
+        # print(f'x {x}')
+        # print(f'a {a}')
         # observation forward
         out = self.layers[0](observations)
         for layer in self.layers[1:]:
@@ -67,12 +73,19 @@ class Critic(nn.Module):
             out_t = nn.ReLU()(out_t)
             out_t = layer(out_t)
         out_t = torch.flatten(out_t)
+
+        tmp = []
+        for _ in range(out.shape[0]):
+            tmp.append(out_t.data.cpu().numpy())
+            # out_t = torch.cat((out_t,out_t))
+        if out_t.is_cuda :
+            out_t = torch.FloatTensor(tmp).to(torch.device('cuda'))
         
         # action features
         out_a = self.action_layer(action)
 
         # add layer
-        out = torch.cat((out,out_t,out_a))
+        out = torch.cat((out,out_t,out_a), dim=1)
 
         # output layer
         # out = self.layers[-1](out)

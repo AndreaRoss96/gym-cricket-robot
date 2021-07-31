@@ -33,17 +33,17 @@ class Cricket:
                 self.fixed_joints, self.fixed_ids,\
                     self.cont_ids, self.revo_ids = self.__find_joints()   # completes the above joint lists 
         
-        num_wheel = 8
+        self.num_wheel = 8
         num_tracks = len(self.track_joints)
         num_joints = len(self.limb_ids)
         
         #Starting positions
         if strating_position == []:
-            self.wheel_position = np.zeros((num_wheel,))
+            self.wheel_position = np.zeros((self.num_wheel,))
             self.limb_positions = np.zeros((num_joints))
         else :
-            self.wheel_position = np.array(strating_position[:num_wheel])
-            self.limb_positions = np.array(strating_position[num_wheel:])
+            self.wheel_position = np.array(strating_position[:self.num_wheel])
+            self.limb_positions = np.array(strating_position[self.num_wheel:])
 
         for joint_id, joint_pos in zip(self.limb_ids, self.limb_positions):
             p.resetJointState(
@@ -55,7 +55,7 @@ class Cricket:
             )
 
         # Starting velocities 0
-        self.track_velocities = np.zeros(num_wheel)
+        self.track_velocities = np.zeros(self.num_wheel)
         self.limb_velocities = np.zeros(len(self.limb_positions))
 
         # Max and Min linear velocity - vx,vy,vz
@@ -293,7 +293,7 @@ class Cricket:
         return np.array(high_lim), np.array(low_lim)
 
     def get_track_limits(self):
-        high_lim, low_lim = np.full((4,), np.pi), np.full((4,),-np.pi)
+        high_lim, low_lim = np.full((self.num_wheel,), np.pi), np.full((self.num_wheel,),-np.pi)
         return high_lim,low_lim
 
     def get_normal_forces_limits(self,gravity):
