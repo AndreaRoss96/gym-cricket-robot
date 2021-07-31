@@ -59,17 +59,28 @@ class Actor(nn.Module):
         for layer in self.layers[1:-1]:
             out = nn.ReLU()(out)
             out = layer(out)
-        out=out[0]
+        # out=out
 
         # terrain forward
+        if len(terrain.shape) > 5 :
+            terrain = terrain[0]
         out_t = self.conv_layers[0](terrain)
         for layer in self.conv_layers[1:]:
             out_t = nn.ReLU()(out_t)
             out_t = layer(out_t)
         out_t = torch.flatten(out_t)
 
+        tmp = []
+        for _ in range(out.shape[0]):
+            tmp.append(out_t.data.cpu().numpy())
+            # out_t = torch.cat((out_t,out_t))
+        if out.is_cuda :
+            out_t = torch.FloatTensor(tmp).to(torch.device('cuda'))
+        else :
+            out_t = torch.FloatTensor(tmp)
+
         # add layer
-        out = torch.cat((out,out_t))
+        out = torch.cat((out,out_t), dim=1)
 
         # output layer
         out = self.layers[-1](out)

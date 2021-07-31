@@ -68,6 +68,8 @@ class Critic(nn.Module):
             out = layer(out)
 
         # terrain forward
+        if len(terrain.shape) > 5 :
+            terrain = terrain[0]
         out_t = self.conv_layers[0](terrain)
         for layer in self.conv_layers[1:]:
             out_t = nn.ReLU()(out_t)
@@ -78,8 +80,10 @@ class Critic(nn.Module):
         for _ in range(out.shape[0]):
             tmp.append(out_t.data.cpu().numpy())
             # out_t = torch.cat((out_t,out_t))
-        if out_t.is_cuda :
+        if out.is_cuda :
             out_t = torch.FloatTensor(tmp).to(torch.device('cuda'))
+        else :
+            out_t = torch.FloatTensor(tmp)
         
         # action features
         out_a = self.action_layer(action)

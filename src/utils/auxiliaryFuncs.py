@@ -1,5 +1,9 @@
 from neural_network.actor_nn import Actor
 from neural_network.critic_nn import Critic
+from torch.autograd import Variable
+import torch
+import numpy as np
+import copy
 
 def init_nn(env, terrain, hidden_layers = [400,300,200], conv_layers = [], kernel_sizes = [150,100,50], action_features_out = 5, init_w=3e-3, output_critic = None):
     """
@@ -19,15 +23,16 @@ def init_nn(env, terrain, hidden_layers = [400,300,200], conv_layers = [], kerne
         conv_layers=conv_layers,
         kernel_sizes=kernel_sizes,
         init_w=init_w)
-    actor_target = Actor(
-        num_states,
-        num_actions,
-        terrain_dim,
-        terrain_output,
-        hidden_layers=hidden_layers,
-        conv_layers=conv_layers,
-        kernel_sizes=kernel_sizes,
-        init_w=init_w)
+    actor_target = copy.deepcopy(actor)
+    #  Actor(
+    #     num_states,
+    #     num_actions,
+    #     terrain_dim,
+    #     terrain_output,
+    #     hidden_layers=hidden_layers,
+    #     conv_layers=conv_layers,
+    #     kernel_sizes=kernel_sizes,
+    #     init_w=init_w)
     critic = Critic(
         num_states,
         num_actions,
@@ -39,17 +44,18 @@ def init_nn(env, terrain, hidden_layers = [400,300,200], conv_layers = [], kerne
         action_features_out = action_features_out,
         output_critic = output_critic,
         init_w=init_w)
-    critic_target = Critic(
-        num_states,
-        num_actions,
-        terrain_dim,
-        terrain_output,
-        hidden_layers=hidden_layers,
-        conv_layers=conv_layers,
-        kernel_sizes=kernel_sizes,
-        action_features_out = action_features_out,
-        output_critic = output_critic,
-        init_w=init_w)
+    critic_target = copy.deepcopy(critic)
+    # Critic(
+    #     num_states,
+    #     num_actions,
+    #     terrain_dim,
+    #     terrain_output,
+    #     hidden_layers=hidden_layers,
+    #     conv_layers=conv_layers,
+    #     kernel_sizes=kernel_sizes,
+    #     action_features_out = action_features_out,
+    #     output_critic = output_critic,
+    #     init_w=init_w)
 
     for target_param, param in zip(actor_target.parameters(), actor.parameters()):
         target_param.data.copy_(param.data)
@@ -57,3 +63,8 @@ def init_nn(env, terrain, hidden_layers = [400,300,200], conv_layers = [], kerne
         target_param.data.copy_(param.data)
     
     return actor,critic,actor_target,critic_target
+
+def to_tensor(ndarray, volatile=False, requires_grad=False, dtype=np.float32):
+    return Variable(
+        torch.from_numpy(ndarray), volatile=volatile, requires_grad=requires_grad
+    ).type(dtype)
