@@ -102,8 +102,6 @@ class Cricket:
             0-3 the value of the tracks movement 
             4... the tortion of all the other joints
         '''
-        print('#'*80)
-        print(action)
         half = int(len(action)/2)
         action = np.array([[a,b] for a,b in zip(action[:half],action[half:])])
         # action -> [(angle1, speed1), (angle2, speed2), ..., (anglen,speedn)]

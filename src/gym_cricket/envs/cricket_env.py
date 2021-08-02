@@ -30,21 +30,24 @@ class CricketEnv(gym.Env):
     '''
     metadata = {'render.modes': ['human']}
 
-    def __init__(self):
+    def __init__(self, is_connected = False):
         self.n_loss = 5
         self.gravity = -9.81
-        self.goal = None
+        # self.goal = None
 
-        self.client = p.connect(p.GUI) # connect to PyBullet using GUI
-
+        if not is_connected :
+            self.__connect()
+        
         # adjust the view angle of the environment
         p.resetDebugVisualizerCamera(
-            cameraDistance=1.5,
+            cameraDistance=7,
             cameraYaw=0,
             cameraPitch=-40,
             cameraTargetPosition=[0.55,-0.35,0.2])
 
-        p.setAdditionalSearchPath(pybullet_data.getDataPath())        
+        p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        self.planeUid = p.loadURDF("plane.urdf")
+                      
         # Plane: to chose the plane I can do a script that changes the path to the desired 
 
         self.cricket = Cricket(self.client)
@@ -81,8 +84,11 @@ class CricketEnv(gym.Env):
             high=high)
         self.np_random, _ = gym.utils.seeding.np_random()
 
-        self.reset()
+        # self.reset()
     
+    def __connect(self):
+        self.client = p.connect(p.GUI) # connect to PyBullet using GUI
+
     def set_reward_values(self,w_joints = None,w_error = 100,
                           disc_factor = 0.99, w_t = 0.0625,w_X = 0.5,w_Y = 0.5,
                           w_Z = 0.5,w_psi = 0.5,w_theta = 0.5,
@@ -116,8 +122,10 @@ class CricketEnv(gym.Env):
          - done     : Boolean
          - info     : string
         """
-        if self.goal == None :
-            raise ValueError("Robot's goal not defined.\
+        try :
+            self.goal
+        except AttributeError:
+            raise AttributeError("Robot's goal not defined.\
                 \n\nUse the function \"set_goal(goal)\"")
 
         self.episode_step += 1
@@ -151,7 +159,7 @@ class CricketEnv(gym.Env):
         return reward, current_state, done, info
     
     def __compute_reward(self,action,pos,angs,limb_pos):
-        """Compute the reard based on the defined reward function"""
+        """Compute the reward based on the defined reward function"""
         # \mathcal{R}_t =-\sum_{i=0}^{no\_track}[\alpha_i(q_{t-1}^i)^2+\beta_i(q_{t-1}^i)^2+\kappa_i|\tau_{t-1}^i|+w_q^i(\Delta q_t^i)^2]-w_\varepsilon (\sum_{i=0}^5\gamma^i\varepsilon_{t-i})^2-w_tt-w_X(\Delta X)^2-w_Y(\Delta Y)^2-w_Z(\Delta Z)^2-w_\psi(\Delta \psi)^2-w_\theta(\Delta \theta)^2-w_\phi(\Delta \phi)^2
         reward = 0
         no_track_sum = 0
@@ -235,19 +243,21 @@ class CricketEnv(gym.Env):
         ''' This function is used to reset the PyBullet environment '''
         self.step_counter = 0
 
-        p.resetSimulation()     # reset PyBullet environment
-        p.configureDebugVisualizer(p.COV_ENABLE_RENDERING,0) # we will enable rendering after we loaded everything
+        p.resetSimulation(physicsClientId=self.client)     # reset PyBullet environment
+        self.__init__(is_connected=True)
+        # p.configureDebugVisualizer(p.COV_ENABLE_RENDERING,0) # we will enable rendering after we loaded everything
         
-        # Plane: to chose the plane I can do a script that changes the path to the desired 
-        self.planeUid = p.loadURDF("plane.urdf")
+        # Plane: to chose the plane I can do a script that changes the path to the desired
+        # p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        # self.planeUid = p.loadURDF("plane.urdf")
         p.setGravity(0,0,self.gravity, physicsClientId=self.client)
         # Reduce length of episodes for RL algorithms
-        p.setTimeStep(1/30, self.client)
+        #p.setTimeStep(1/300, self.client)
 
         # self.client = p.connect(p.GUI)
 
-        # init Cricket & goal
-        self.cricket = Cricket(self.client)
+        # init Cricket & 
+        # self.cricket = Cricket(self.client)
         self.cricketUid, _ = self.cricket.get_ids()
 
         rest_poses = np.random.uniform(-math.pi,math.pi,p.getNumJoints(self.cricketUid))

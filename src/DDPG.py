@@ -26,6 +26,8 @@ class DDPG:
          - gamma : 
         """
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if self.device.type != "cuda":
+            raise Exception("cuda not found!")
 
         self.terrain = torch.FloatTensor(terrain).unsqueeze(0).to(self.device)
         self.terrain_full = None

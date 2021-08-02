@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import pywavefront as pw
 import torch
 from numpy.lib.polynomial import RankWarning
+import warnings
+warnings.filterwarnings("ignore")
 
 from gym_cricket.envs.cricket_env import CricketEnv
 from DDPG import DDPG
@@ -57,7 +59,9 @@ for episode in range(num_episodes):
 
         state = new_state
         episode_reward += reward
-
+    
+    print('_'*40)
+    print(f'episode reward: {episode_reward}')
     rewards.append(episode_reward)
     avg_rewards.append(np.mean(rewards[-10:]))
 

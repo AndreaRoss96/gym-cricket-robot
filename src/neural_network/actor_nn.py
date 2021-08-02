@@ -50,10 +50,6 @@ class Actor(nn.Module):
         self.layers[-1].weight.data.uniform_(-init_w, init_w)
 
     def forward(self, observations, terrain):
-        print('IIIIIIIIIIIIIIIII'*100)
-        print(terrain)
-        # print()
-        # print(terrain)
         # action forward
         out = self.layers[0](observations)
         for layer in self.layers[1:-1]:

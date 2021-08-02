@@ -55,12 +55,7 @@ class Critic(nn.Module):
 
 
     def forward(self, observations, terrain, action):
-        print('IIIIIIIIIIIIIIIII'*100)
-        print(terrain)
-        print(terrain.shape)
-        #x, a = observations
-        # print(f'x {x}')
-        # print(f'a {a}')
+
         # observation forward
         out = self.layers[0](observations)
         for layer in self.layers[1:]:
