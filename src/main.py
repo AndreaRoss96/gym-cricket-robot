@@ -71,7 +71,8 @@ for episode in range(num_episodes):
     
     avg_rewards.append(np.mean(rewards[-10:]))
 
-# TODO: Si riesce a farlo live? 
+# TODO: Si riesce a farlo live?
+ddpg.save_model('weights_out') # add read/load directory for the measures of the goal and then use it as a output
 plt.plot(rewards)
 plt.plot(avg_rewards)
 plt.plot()
