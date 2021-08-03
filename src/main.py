@@ -60,9 +60,15 @@ for episode in range(num_episodes):
         state = new_state
         episode_reward += reward
     
-    print('_'*40)
-    print(f'episode reward: {episode_reward}')
     rewards.append(episode_reward)
+    print('_'*40)
+    print(f'episode no: {episode}')
+    print(f'episode reward: {episode_reward}')
+    n = 10
+    print(f'last {n} episode reward: {rewards[-n:]}')
+    print('_'*40)
+    print()
+    
     avg_rewards.append(np.mean(rewards[-10:]))
 
 # TODO: Si riesce a farlo live? 
