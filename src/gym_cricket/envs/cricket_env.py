@@ -43,7 +43,7 @@ class CricketEnv(gym.Env):
             cameraDistance=7,
             cameraYaw=0,
             cameraPitch=-40,
-            cameraTargetPosition=[0.55,-0.35,0.2])
+            cameraTargetPosition=[0.,-0.,0.])
 
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         self.planeUid = p.loadURDF("plane.urdf")
@@ -92,7 +92,7 @@ class CricketEnv(gym.Env):
     def set_reward_values(self,w_joints = None,w_error = 100,
                           disc_factor = 0.99, w_t = 0.0625,w_X = 0.5,w_Y = 0.5,
                           w_Z = 0.5,w_psi = 0.5,w_theta = 0.5,
-                          w_sigma = 0.5):
+                          w_sigma = 0.5, early_stop_limit = 250):
         """Set the costants used in the reward function"""
         if w_joints == None :
             _, limb_joints, _ = self.cricket.get_joint_ids()
@@ -109,6 +109,7 @@ class CricketEnv(gym.Env):
         self.w_psi = w_psi
         self.w_theta = w_theta
         self.w_sigma = w_sigma
+        self.early_stop_limit = early_stop_limit
 
     def step(self, action):
         """Advance the Task by one step.
@@ -149,7 +150,7 @@ class CricketEnv(gym.Env):
         self.previous_actions = action
         if reward < self.previous_reward :
             self.early_stop +=1
-            if self.early_stop >= 250 :
+            if self.early_stop >= self.early_stop_limit :
                 done = True
                 info = "reward doesn't grow"
         else :

@@ -81,9 +81,9 @@ robot = Cricket(physicsClient,quadrupede_starting_pos)
 ##########################
 
 print("="*80)
-print(robot.track_ids)
+# print(robot.track_ids())
 print(robot.get_action_limits())
-raise("fgia")
+# raise("fgia")
 print("="*80)
 robot_id = robot.get_ids()[0]
 
@@ -121,13 +121,19 @@ while True:
     mvm_ = 0.03
     action_1 = np.array(
         [
-            [mvm_,0.],[mvm_,0.0],[mvm_,0.0],
-            [mvm_,0.],[0.0,0.0],[0.0,0.0],
-            [mvm,0.],[0.0,0.0],[0.0,0.0],
-            [mvm,0.],[0.0,0.0],[0.0,0.0],
-            [mvm,0.],[0.0,0.0],[0.0,0.0],
-            [mvm,0.],[0.0,0.0],[0.0,0.0],
-            [mvm,0.],[0.0,0.0]
+         0.0,0.0,0.0,0.0,0.0,0.0,0.8,0.0,0.8,0.0,
+         0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.8,0.0,0.8,
+         0.0,0.0,0.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0,
+         0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,
+        ]
+    )
+
+    action_2 = np.array(
+        [
+         0.0,0.0,0.0,0.0,0.0,0.0,-0.8,0.0,-0.8,0.0,
+         0.0,0.0,0.0,0.0,0.0,0.0,0.0,-0.8,0.0,-0.8,
+         0.0,0.0,0.0,0.0,-1.0,0.0,-1.0,0.0,-1.0,0.0,
+         0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-1.0,0.0,
         ]
     )
     bella = "*" * 20
@@ -138,12 +144,16 @@ while True:
     print(t_pos[0])
 
     if flag :
+        print("action 1")
         robot.perform_action(action_1)
-        if p.getJointState(robot_id, robot.limb_joints[0][0])[0] > 1.566:
-            # print("**"*100)
-            flag = False
+        # flag = not flag
+        # if p.getJointState(robot_id, robot.limb_joints[0][0])[0] > 1.566:
+        #     # print("**"*100)
+        #     flag = not flag
     else :
-        robot.perform_action(action_1)
+        print("action 2")
+        robot.perform_action(action_2)
+        flag = not flag
         # if p.getJointState(robot_id, robot.limb_joints[0][0])[0] < -1.566 :
         #     break
 
