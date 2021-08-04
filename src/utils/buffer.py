@@ -49,7 +49,7 @@ class Buffer:
         min_start = len(self.buffer) - batch_size
         start = np.random.randint(0, min_start)
 
-        for sample in range(start, start + batch_size):
+        for experience in range(start, start + batch_size):
             state, action, reward, next_state, done = self.buffer[start]
             state, action, reward, next_state, done = experience
             state_batch.append(state)
