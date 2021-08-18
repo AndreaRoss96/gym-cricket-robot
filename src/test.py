@@ -75,7 +75,8 @@ coll_3 = np.full((13,), 0)
 coll_starting_pos = np.concatenate((coll_1,coll_2,coll_3))
 
 # Start
-robot = Cricket(physicsClient,quadrupede_starting_pos)
+f_path = "/home/andrea/Desktop/HebiCricket/ros_packages/hebi_description/urdf/kits/cricket.urdf"
+robot = Cricket(physicsClient,quadrupede_starting_pos, f_path=f_path)
 ##########################
 ## STOP STARTING POS #####
 ##########################

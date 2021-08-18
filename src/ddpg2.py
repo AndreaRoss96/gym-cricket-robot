@@ -64,7 +64,11 @@ class DDPG(object):
         # Sample batch
         state_batch, action_batch, reward_batch, \
         next_state_batch, terminal_batch = self.memory.sample_and_split(self.batch_size)
-
+        if state_batch.shape == (64,1):
+            tmp = []
+            for arr in state_batch:
+                tmp.append(arr[0][0])
+            state_batch = np.array(tmp, dtype=np.float64)
         # Prepare for the target q batch
         next_q_values = self.critic_target(
             to_tensor(next_state_batch, volatile=True),

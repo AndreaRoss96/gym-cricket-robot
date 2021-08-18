@@ -4,13 +4,15 @@ import numpy as np
 import os
 
 class Cricket:
-    def __init__(self, client, strating_position=[], base_position = [0,0,0.5], joint_speed = 0, c_rolling = 0.2, c_drag = 0.01, c_throttle = 20) -> None:
+    def __init__(self, client, strating_position=[], base_position = [0,0,0.5], normal_forces = 4, f_path='urdfs/cricket_robot.urdf') -> None:
         """
         Input:
         - clinet : costant
         PyBullet phisic client
         - starting_position : np.array
         starting position for the joints
+        - base_position :
+         [x,y,z] position of the robot at the beginning of the simulation
 
 
         variables: 
@@ -22,7 +24,7 @@ class Cricket:
             all the other non-fixed joints (knees, shoulders, and so on)
         """
         self.client = client
-        f_name = os.path.join(os.path.dirname(__file__), 'urdfs/cricket_robot.urdf')
+        f_name = os.path.join(os.path.dirname(__file__), f_path)
         self.cricket = p.loadURDF(fileName = f_name,
                                   basePosition = base_position,
                                   physicsClientId=self.client
@@ -30,9 +32,8 @@ class Cricket:
                                   #flags=p.URDF_USE_SELF_COLLISION | p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
         self.track_joints,self.wheel_ids,\
             self.limb_joints,self.limb_ids,\
-                self.fixed_joints, self.fixed_ids,\
-                    self.cont_ids, self.revo_ids = self.__find_joints()   # completes the above joint lists 
-        
+                self.fixed_joints, self.fixed_ids = self.__find_joints()   # completes the above joint lists 
+
         self.num_wheel = 8
         num_tracks = len(self.track_joints)
         num_joints = len(self.limb_ids)
@@ -67,15 +68,7 @@ class Cricket:
         self.min_avel = np.array([0,0,0])
 
         # Normal forces
-        self.n_normal_f = 4
-
-        # Joint speed
-        self.joint_speed = 0
-        # Drag constants
-        self.c_rolling = 0.2
-        self.c_drag = 0.01
-        # Throttle constant increases "speed" of the car
-        self.c_throttle = 20
+        self.n_normal_f = normal_forces
 
         # Store all the collision between links and their fixed accessories (which are considered collision by PyBullet)
         self.collision_safe = {}
@@ -95,8 +88,6 @@ class Cricket:
         the wheel tracks
 
         [angle1, angle2, ..., anglen, speed1, speed2, ..., anglen]
-
-        Domanda: should I need to add the acceleration of the tortion as well?
 
         action:
             0-3 the value of the tracks movement 
@@ -173,7 +164,6 @@ class Cricket:
         track = []
         track_joints, limb_joints, fixed_joints = [], [], []
         wheel_ids, limb_ids, fixed_ids = [], [], []
-        cont_ids, revo_ids = [], []
         for joint_number in range(number_of_joints):
             joint_info = p.getJointInfo(self.cricket, joint_number, physicsClientId=self.client)
             # [jointIndex, jointName (bytes), jointType, ...]
@@ -193,8 +183,7 @@ class Cricket:
                 fixed_joints.append(joint_info)
         return np.array(track_joints, dtype=object), np.array(wheel_ids, dtype=object),\
                 np.array(limb_joints, dtype=object), np.array(limb_ids, dtype=object),\
-                 np.array(fixed_joints, dtype=object), np.array(fixed_ids, dtype=object),\
-                  np.array(cont_ids, dtype=object), np.array(revo_ids, dtype=object)
+                 np.array(fixed_joints, dtype=object), np.array(fixed_ids, dtype=object)
     
     def get_joint_positions(self):
         """
@@ -252,18 +241,6 @@ class Cricket:
          - a list of 4 lists (one per track) of normal forces, for each list:
             4 normal forces along the wheels and the track between the wheels
         """
-        # print(f'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> {self.wheel_ids}')
-        # for wheel_1,wheel_2 in self.wheel_ids:
-        #     track_id = wheel_1 + 1
-        #     contact_points = [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=wheel_1)]
-        #     contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=wheel_2)]
-        #     contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=track_id)]
-
-        #     if len(contact_points) < self.n_normal_f :
-        #         contact_points += [0] * (self.n_normal_f - len(contact_points))
-        #     elif len(contact_points) > self.n_normal_f :
-        #         contact_points = sorted(contact_points, reverse=True)[:self.n_normal_f]
-        
         contact_points = []
         for count, wheel_id in enumerate(self.wheel_ids):
             contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=wheel_id)]
@@ -272,12 +249,12 @@ class Cricket:
                 track_id = wheel_id + 1
                 contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=track_id)]
 
-            if len(contact_points) < self.n_normal_f :
-                contact_points += [0.0] * (self.n_normal_f - len(contact_points))
-            elif len(contact_points) > self.n_normal_f :
-                contact_points = sorted(contact_points, reverse=True)[:self.n_normal_f]
+        if len(contact_points) < self.n_normal_f :
+            contact_points += [0.0] * (self.n_normal_f - len(contact_points))
+        elif len(contact_points) > self.n_normal_f :
+            contact_points = sorted(contact_points, reverse=True)[:self.n_normal_f]
 
-            return contact_points
+        return contact_points
 
     def get_joint_limits(self):
         high_lim, low_lim = [] ,[]
@@ -338,37 +315,3 @@ class Cricket:
         print('Link states')
         print('='*times)
 
-"""
-USEFUL DOC:
-
-setJointMotorControlArray:
-[
-    required - bodyUniqueId - int body unique id as returned from loadURDF etc.
-    required - jointIndices - list of int index in range [0..getNumJoints(bodyUniqueId) (note that link index == joint index)
-    required - controlMode - int POSITION_CONTROL, VELOCITY_CONTROL,
-                                    TORQUE_CONTROL, PD_CONTROL. (There is also
-                                    experimental STABLE_PD_CONTROL for stable(implicit) PD
-                                    control, which requires additional preparation. See
-                                    humanoidMotionCapture.py and pybullet_envs.deep_mimc for
-                                    STABLE_PD_CONTROL examples.)
-    optional - targetPositions - list of float in POSITION_CONTROL the targetValue is target position of
-                                    the joint
-    optional - targetVelocities - list of float in PD_CONTROL, VELOCITY_CONTROL and
-                                    POSITION_CONTROL the targetValue is target velocity of the
-                                    joint, see implementation note below.
-    optional - forces - list of float in PD_CONTROL, POSITION_CONTROL and
-                            VELOCITY_CONTROL this is the maximum motor force used to
-                            reach the target value. In TORQUE_CONTROL this is the
-                            force/torque to be applied each simulation step.
-    optional - positionGains - list of float See implementation note below
-    optional - velocityGains - list of float See implementation note below
-    optional - physicsClientId - int if you are connected to multiple servers, you can pick one. 
-]
-______________________________________________________________________________________________________
-
--------------------------------------------------------------------------
-method          | implementation    | component                         |
--------------------------------------------------------------------------
-POSITION_CONTROL| constraint        | velocity and position constraint  | error = position_gain*(desired_position-actual_position)+velocity_gain*(desired_velocity-actual_velocity)
-VELOCITY_CONTROL| constraint        | pure velocity constraint          | error = desired_velocity - actual_velocity
-"""

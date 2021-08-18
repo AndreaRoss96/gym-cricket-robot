@@ -30,7 +30,7 @@ class CricketEnv(gym.Env):
     '''
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, is_connected = False):
+    def __init__(self, plane_path = "plane.urdf", cricket_model_path = "urdfs/cricket_robot.urdf", is_connected = False):
         self.n_loss = 5
         self.gravity = -9.81
         # self.goal = None
@@ -46,11 +46,11 @@ class CricketEnv(gym.Env):
             cameraTargetPosition=[0.,-0.,0.])
 
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
-        self.planeUid = p.loadURDF("plane.urdf")
+        self.planeUid = p.loadURDF(plane_path)
                       
         # Plane: to chose the plane I can do a script that changes the path to the desired 
 
-        self.cricket = Cricket(self.client)
+        self.cricket = Cricket(self.client, f_path=cricket_model_path)
         # Defining OBSERVATION space A.K.A. NN inputs
         ## position X,Y,Z
         high_pos = np.inf * np.ones(3)
@@ -84,22 +84,29 @@ class CricketEnv(gym.Env):
             high=high)
         self.np_random, _ = gym.utils.seeding.np_random()
 
+        dim = len(self.cricket.get_action_limits())
+        self.previous_actions = np.zeros(shape=(dim,))
+        self.episode_step = 0
+        self.loss = np.zeros((self.n_loss,), dtype=np.float32)
+        self.previous_reward = - np.inf
+        self.early_stop = 0
+
         # self.reset()
     
     def __connect(self):
-        self.client = p.connect(p.GUI) # connect to PyBullet using GUI
+        self.client = p.connect(p.GUI) # p.connect(p.DIRECT) # connect to PyBullet using GUI
 
     def set_reward_values(self,w_joints = None,w_error = 100,
                           disc_factor = 0.99, w_t = 0.0625,w_X = 0.5,w_Y = 0.5,
                           w_Z = 0.5,w_psi = 0.5,w_theta = 0.5,
                           w_sigma = 0.5, early_stop_limit = 250):
         """Set the costants used in the reward function"""
-        if w_joints == None :
+        if w_joints is not None :
+            self.w_joints = w_joints
+        else :
             _, limb_joints, _ = self.cricket.get_joint_ids()
             num_limb_joints = len(limb_joints)
             self.w_joints = np.full((num_limb_joints,), 1)
-        else :
-            self.w_joints = w_joints
         self.w_error = w_error
         self.disc_factor = disc_factor
         self.w_t = w_t
@@ -138,6 +145,7 @@ class CricketEnv(gym.Env):
         current_state = self.current_state()
         dict_state = dict(zip(state_keys,current_state))
         current_state = self.__unpack_state(current_state)
+
         # reward
         reward = self.__compute_reward(
             action,
@@ -151,6 +159,8 @@ class CricketEnv(gym.Env):
         if reward < self.previous_reward :
             self.early_stop +=1
             if self.early_stop >= self.early_stop_limit :
+                print("!"*80)
+                print("early stop")
                 done = True
                 info = "reward doesn't grow"
         else :
@@ -266,13 +276,6 @@ class CricketEnv(gym.Env):
         self.cricket.set_joint_position(rest_poses)
         # for i in range(p.getNumJoints(self.cricketUid)):
         #     p.resetJointState(self.cricketUid,i, rest_poses[i],physicsClientId=self.client) # (bodyID, JointIndex,targetValue,targetVel, physicsClient)
-
-        dim = len(self.cricket.get_action_limits())
-        self.previous_actions = np.zeros(shape=(dim,))
-        self.episode_step = 0
-        self.loss = np.zeros((self.n_loss,), dtype=np.float32)
-        self.previous_reward = - np.inf
-        self.early_stop = 0
        
         return self.__unpack_state(self.current_state())
 
@@ -332,4 +335,4 @@ class CricketEnv(gym.Env):
         Return:
             [x,y,z,psi,omega,mu,vx,vy,vz, ...]
         """
-        return [elem for sub_obs in state for elem in [*sub_obs]]
+        return np.array([elem for sub_obs in state for elem in [*sub_obs]], dtype=np.float32)

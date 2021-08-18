@@ -10,6 +10,7 @@ from utils.auxiliaryFuncs import init_nn
 from utils.util import *
 from ddpg2 import DDPG
 import pywavefront as pw
+import matplotlib.pyplot as plt
 
 # gym.undo_logger_setup()
 
@@ -92,6 +93,13 @@ def train(num_iterations, agent, env,  evaluate, validate_steps, output, max_epi
             episode_steps = 0
             episode_reward = 0.
             episode += 1
+    return rewards, avg_rewards
+    # plt.plot(rewards)
+    # plt.plot(avg_rewards)
+    # plt.plot()
+    # plt.xlabel('Episode')
+    # plt.ylabel('Reward')
+    # plt.show()
 
 
 def test(num_episodes, agent, env, evaluate, model_path, visualize=True, debug=False):
@@ -126,8 +134,8 @@ if __name__ == "__main__":
     parser.add_argument('--rmsize',     default=6000000, type=int, help='memory size')
     parser.add_argument('--window_length', default=1, type=int, help='')
     parser.add_argument('--tau',        default=0.001, type=float, help='moving average for target network')
-    parser.add_argument('--ou_theta',   default=0.15, type=float, help='noise theta')
-    parser.add_argument('--ou_sigma',   default=0.2, type=float, help='noise sigma')
+    parser.add_argument('--ou_theta',   default=0.0001, type=float, help='noise theta')
+    parser.add_argument('--ou_sigma',   default=0.0002, type=float, help='noise sigma')
     parser.add_argument('--ou_mu',      default=0.0, type=float, help='noise mu')
     parser.add_argument('--validate_episodes', default=20, type=int, help='how many episode to perform during validate experiment')
     parser.add_argument('--max_episode_length', default=500, type=int, help='')
@@ -139,13 +147,14 @@ if __name__ == "__main__":
     parser.add_argument('--epsilon',    default=50000,type=int, help='linear decay of exploration policy')
     parser.add_argument('--seed',       default=-1, type=int, help='')
     parser.add_argument('--resume',     default='default',type=str, help='Resuming model path for testing')
-    parser.add_argument('--early_stop', default=150, type=int,help='change episode after [early_stop] step with a non-growing reward')
+    parser.add_argument('--early_stop', default=100, type=int,help='change episode after [early_stop] steps with a non-growing reward')
     # parser.add_argument('--l2norm', default=0.01, type=float, help='l2 weight decay') # TODO
     # parser.add_argument('--cuda', dest='cuda', action='store_true') # TODO
 
     args = parser.parse_args()
     args.output = get_output_folder(args.output, args.env)
     if args.resume == 'default':
+        # args.resume = 'output/{}-run6'.format(args.env)
         args.resume = 'output/{}-run0'.format(args.env)
 
     env = CricketEnv()
@@ -171,7 +180,7 @@ if __name__ == "__main__":
 
     # Initialize neural networks
     actor, critic, actor_target, critic_target = init_nn(
-        env, terrain, kernel_sizes=[1])
+        env, terrain, hidden_layers=[150,100,50], kernel_sizes=[1])
 
     # Initialize DDPG
     ddpg = DDPG(env, actor, critic, actor_target,
@@ -181,8 +190,14 @@ if __name__ == "__main__":
                          args.validate_steps, args.output, max_episode_length=args.max_episode_length)
 
     if args.mode == 'train':
-        train(args.train_iter, ddpg, env, evaluate, args.validate_steps,
+        rewards, avg_rewards = train(args.train_iter, ddpg, env, evaluate, args.validate_steps,
               args.output, max_episode_length=args.max_episode_length, debug=True)#args.debug)
+        plt.plot(rewards)
+        plt.plot(avg_rewards)
+        plt.plot()
+        plt.xlabel('Episode')
+        plt.ylabel('Reward')
+        plt.show()
 
     elif args.mode == 'test':
         test(args.validate_episodes, ddpg, env, evaluate, args.resume,

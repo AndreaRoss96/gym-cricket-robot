@@ -22,6 +22,8 @@ class CricketGoal(Cricket):
 
         if client == None :
             client = p.connect(p.DIRECT)
+        else :
+            client = p.connect(client)
         super().__init__(client=client, strating_position=joint_position, base_position=base_position)
 
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -29,7 +31,7 @@ class CricketGoal(Cricket):
         p.setGravity(0,0,gravity, physicsClientId=self.client)
 
         for _ in range(0,100):
-            p.stepSimulation()
+            p.stepSimulation(physicsClientId=client)
 
         _, limb_pos = self.get_joint_positions()
         self.final_limb = limb_pos
