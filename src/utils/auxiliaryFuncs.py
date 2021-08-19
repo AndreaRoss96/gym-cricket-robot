@@ -10,6 +10,10 @@ def init_nn(env, terrain, hidden_layers = [400,300,200], conv_layers = [], kerne
     """
     initialize the target networks as copies of the original networks
     """
+    # check input
+    if not (len(kernel_sizes) == len(conv_layers) + 1):
+        raise ValueError("invalid kernel size")
+
     num_states = env.observation_space.shape[0]
     num_actions = env.action_space.shape[0]
     terrain_dim = terrain.shape[1]

@@ -161,6 +161,9 @@ class HebiCricket(Cricket_abs):
 
     @overrides
     def get_normal_forces_limits(self, gravity):
+        mass = 22.569 * 100 # from kilos to grams
+        max_nf, min_nf = np.full((self.n_normal_f,),mass*gravity), np.zeros((self.n_normal_f))
+        return max_nf,min_nf
         
     @overrides
     def get_normal_forces(self, planeId : str):

@@ -1,3 +1,4 @@
+from numpy.core.fromnumeric import std
 import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
@@ -9,9 +10,11 @@ import math
 import numpy as np
 from gym_cricket.assests.cricketGoal import CricketGoal
 from gym_cricket.assests.cricket import Cricket
+from gym_cricket.assests.hebi_cricket import HebiCricket
 """
 https://github.com/openai/gym/blob/master/docs/creating-environments.md
-Blog interessanti da cui attingere conoscienza:
+
+Repositories that use RL, OpenAI, and PyBullet
 - Simple driving car
 https://gerardmaggiolino.medium.com/creating-openai-gym-environments-with-pybullet-part-2-a1441b9a4d8e
 ---> GitHub: https://github.com/GerardMaggiolino/Gym-Medium-Post/blob/48b512fd8f3616bb24b4c20695266ba8efcc6387/simple_driving/envs/simple_driving_env.py
@@ -30,7 +33,7 @@ class CricketEnv(gym.Env):
     '''
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, plane_path = "plane.urdf", cricket_model_path = "urdfs/cricket_robot.urdf", is_connected = False):
+    def __init__(self, plane_path = "plane.urdf", cricket_model = "basic_cricket", is_connected = False):
         self.n_loss = 5
         self.gravity = -9.81
         # self.goal = None
@@ -49,8 +52,16 @@ class CricketEnv(gym.Env):
         self.planeUid = p.loadURDF(plane_path)
                       
         # Plane: to chose the plane I can do a script that changes the path to the desired 
-
-        self.cricket = Cricket(self.client, f_path=cricket_model_path)
+        self.cricket_model = cricket_model
+        std_path = r'src/gym_cricket/assests/urdfs/'
+        final_path = std_path + self.cricket_model + '.urdf'
+        if cricket_model == 'hebi_cricket' :
+            self.cricket = HebiCricket(self.client, f_path=final_path)
+        elif cricket_model == 'basic_cricket' :
+            self.cricket = Cricket(self.client, f_path=final_path)
+        else :
+            raise ValueError('Check the name of the cricket model')
+        
         # Defining OBSERVATION space A.K.A. NN inputs
         ## position X,Y,Z
         high_pos = np.inf * np.ones(3)
@@ -256,27 +267,13 @@ class CricketEnv(gym.Env):
 
         p.resetSimulation(physicsClientId=self.client)     # reset PyBullet environment
         self.__init__(is_connected=True)
-        # p.configureDebugVisualizer(p.COV_ENABLE_RENDERING,0) # we will enable rendering after we loaded everything
-        
-        # Plane: to chose the plane I can do a script that changes the path to the desired
-        # p.setAdditionalSearchPath(pybullet_data.getDataPath())
-        # self.planeUid = p.loadURDF("plane.urdf")
         p.setGravity(0,0,self.gravity, physicsClientId=self.client)
-        # Reduce length of episodes for RL algorithms
-        #p.setTimeStep(1/300, self.client)
-
-        # self.client = p.connect(p.GUI)
-
-        # init Cricket & 
-        # self.cricket = Cricket(self.client)
         self.cricketUid, _ = self.cricket.get_ids()
 
         rest_poses = np.random.uniform(-math.pi,math.pi,p.getNumJoints(self.cricketUid))
         # here you can set the position of the joints (randomly is good)
         self.cricket.set_joint_position(rest_poses)
-        # for i in range(p.getNumJoints(self.cricketUid)):
-        #     p.resetJointState(self.cricketUid,i, rest_poses[i],physicsClientId=self.client) # (bodyID, JointIndex,targetValue,targetVel, physicsClient)
-       
+
         return self.__unpack_state(self.current_state())
 
     def render(self, mode='human'):
