@@ -4,7 +4,7 @@ import numpy as np
 import os
 
 class Cricket:
-    def __init__(self, client, strating_position=[], base_position = [0,0,0.5], normal_forces = 4, f_path='urdfs/cricket_robot.urdf') -> None:
+    def __init__(self, client, strating_position=[], base_position = [0,0,0.5], normal_forces = 4) -> None:
         """
         Input:
         - clinet : costant
@@ -24,6 +24,7 @@ class Cricket:
             all the other non-fixed joints (knees, shoulders, and so on)
         """
         self.client = client
+        f_path='urdfs/cricket_robot.urdf'
         f_name = os.path.join(os.path.dirname(__file__), f_path)
         self.cricket = p.loadURDF(fileName = f_name,
                                   basePosition = base_position,

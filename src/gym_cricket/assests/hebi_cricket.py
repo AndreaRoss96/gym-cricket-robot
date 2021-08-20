@@ -1,9 +1,10 @@
 from numpy.core import overrides
-from cricket_abs import Cricket_abs
 from numpy.core.defchararray import join
 import pybullet as p
 import numpy as np
 import os
+
+from gym_cricket.assests.cricket_abs import Cricket_abs
 
 class HebiCricket(Cricket_abs):
     def __init__(self, client, strating_position=[], base_position = [0,0,0.5], normal_forces = 4) -> None:
@@ -26,6 +27,7 @@ class HebiCricket(Cricket_abs):
             all the other non-fixed joints (knees, shoulders, and so on)
         """
         self.client = client
+        f_path = '/home/andrea/Desktop/HebiCricket/ros_packages/hebi_description/urdf/kits/cricket.urdf'
         f_name = os.path.join(os.path.dirname(__file__), f_path)
         self.cricket = p.loadURDF(fileName = f_name,
                                   basePosition = base_position,
@@ -61,11 +63,11 @@ class HebiCricket(Cricket_abs):
         self.limb_velocities = np.zeros(len(self.limb_positions))
 
         # Max and Min linear velocity - vx,vy,vz
-        velocity = 100
-        self.max_lvel = np.array([velocity,velocity,velocity])
+        self.velocity = 100
+        self.max_lvel = np.array([self.velocity,self.velocity,self.velocity])
         self.min_lvel = np.array([0,0,0])
-        # Max and Min angular velocity
-        self.max_avel = np.array([velocity,velocity,velocity])
+        # Max and Min angular self.velocity
+        self.max_avel = np.array([self.velocity,self.velocity,self.velocity])
         self.min_avel = np.array([0,0,0])
 
         # Normal forces
@@ -101,7 +103,6 @@ class HebiCricket(Cricket_abs):
                 np.array(limb_joints, dtype=object), np.array(limb_ids, dtype=object),\
                  np.array(fixed_joints, dtype=object), np.array(fixed_ids, dtype=object)
 
-    @overrides
     def perform_action(self, action):
         half = int(len(action)/2)
         action = np.array([[a,b] for a,b in zip(action[:half],action[half:])])
@@ -134,14 +135,13 @@ class HebiCricket(Cricket_abs):
             physicsClientId = self.client
             )
 
-    @overrides
     def get_joint_positions(self):
         """
          - getJointState(robot_id, jointIndex)
         [*jointPosition*, jointVelocity, jointReactionForces, appliedJointMotorTorque]
         """
-        track_pos = [p.getJointState(self.cricket, wheel[0], physicsClientId=self.client)[0] # wheel[0] gets the jointIndex
-            for track in self.track_joints for wheel in track]
+        track_pos = [p.getJointState(self.cricket, track[0], physicsClientId=self.client)[0] # wheel[0] gets the jointIndex
+            for track in self.track_joints]
         track_pos = self.__normalize(track_pos)
 
         limb_pos = [p.getJointState(self.cricket, joint[0], physicsClientId=self.client)[0]
@@ -159,13 +159,11 @@ class HebiCricket(Cricket_abs):
                 res.append(position%np.pi)
         return res
 
-    @overrides
     def get_normal_forces_limits(self, gravity):
         mass = 22.569 * 100 # from kilos to grams
         max_nf, min_nf = np.full((self.n_normal_f,),mass*gravity), np.zeros((self.n_normal_f))
         return max_nf,min_nf
-        
-    @overrides
+
     def get_normal_forces(self, planeId : str):
         """Get all the normal forces between the robot and palneId
         
@@ -181,7 +179,7 @@ class HebiCricket(Cricket_abs):
             contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=wheel_id)]
         
         for limb_joint in self.limb_joints:
-            if "track" in limb_joint[1]:
+            if "track" in limb_joint[1].decode("utf-8"):
                 contact_points += [c_point[9] for c_point in p.getContactPoints(self.cricket, planeId, linkIndexA=limb_joint[0])]
 
         if len(contact_points) < self.n_normal_f :
@@ -190,4 +188,21 @@ class HebiCricket(Cricket_abs):
             contact_points = sorted(contact_points, reverse=True)[:self.n_normal_f]
 
         return contact_points
+
+    def get_action_velocities_limits(self):
+        dim = len(self.limb_ids) + len(self.track_joints)
+        high_lim = np.full((dim,), 100)
+        low_lim = np.zeros((dim,))
+        return high_lim,low_lim
+
+    def get_joint_limits(self):
+        high_lim, low_lim = [] ,[]
+        for joint in self.limb_joints:
+            if joint[8] == 0 : # continous joint
+                high_lim.append(np.pi)
+                low_lim.append(-np.pi)
+            else:
+                high_lim.append(np.pi/2)
+                low_lim.append(-np.pi/2)
+        return np.array(high_lim), np.array(low_lim)
 

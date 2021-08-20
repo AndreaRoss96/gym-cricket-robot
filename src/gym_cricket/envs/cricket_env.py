@@ -3,14 +3,14 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 
-import os
 import pybullet as p
 import pybullet_data
 import math
 import numpy as np
-from gym_cricket.assests.cricketGoal import CricketGoal
 from gym_cricket.assests.cricket import Cricket
+from gym_cricket.assests.cricketGoal import CricketGoal
 from gym_cricket.assests.hebi_cricket import HebiCricket
+from gym_cricket.assests.hebi_cricketGoal import HebiCricketGoal
 """
 https://github.com/openai/gym/blob/master/docs/creating-environments.md
 
@@ -48,17 +48,18 @@ class CricketEnv(gym.Env):
             cameraPitch=-40,
             cameraTargetPosition=[0.,-0.,0.])
 
+        self.plane_path = plane_path
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
-        self.planeUid = p.loadURDF(plane_path)
+        self.planeUid = p.loadURDF(self.plane_path)
                       
         # Plane: to chose the plane I can do a script that changes the path to the desired 
         self.cricket_model = cricket_model
         std_path = r'src/gym_cricket/assests/urdfs/'
         final_path = std_path + self.cricket_model + '.urdf'
         if cricket_model == 'hebi_cricket' :
-            self.cricket = HebiCricket(self.client, f_path=final_path)
+            self.cricket = HebiCricket(self.client)
         elif cricket_model == 'basic_cricket' :
-            self.cricket = Cricket(self.client, f_path=final_path)
+            self.cricket = Cricket(self.client)
         else :
             raise ValueError('Check the name of the cricket model')
         
@@ -246,27 +247,12 @@ class CricketEnv(gym.Env):
         loss_state = self.loss
         return [pos,angs,l_vel,a_vel,limb_pos,track_pos,normal_forces,loss_state]
 
-    def __joint_penalty(self, id): # DELETE
-        is_continous = p.getJointInfo(self.cricketUid,id)[8] == 0.0
-        val = p.getJointState(self.cricketUid,id)[0]
-        # normalization 
-        if is_continous:
-            if val > math.pi:
-                res = val%math.pi - math.pi
-            elif val < math.pi:
-                res = val%math.pi + math.pi
-            else :
-                res = val
-        else:
-            res = val
-        return res
-
     def reset(self):
         ''' This function is used to reset the PyBullet environment '''
         self.step_counter = 0
 
         p.resetSimulation(physicsClientId=self.client)     # reset PyBullet environment
-        self.__init__(is_connected=True)
+        self.__init__(self.plane_path, self.cricket_model, is_connected=True)
         p.setGravity(0,0,self.gravity, physicsClientId=self.client)
         self.cricketUid, _ = self.cricket.get_ids()
 
@@ -314,9 +300,15 @@ class CricketEnv(gym.Env):
 
     def set_goal(self, joint_position, base_position = None):
         if base_position == None :
-            self.goal = CricketGoal(joint_position, self.gravity)
+            if self.cricket_model == 'hebi_cricket' :
+                self.goal = HebiCricketGoal(joint_position, self.gravity, self.plane_path)
+            elif self.cricket_model == 'basic_cricket' :
+                self.goal = CricketGoal(joint_position, self.gravity, self.plane_path)
         else :
-            self.goal = CricketGoal(joint_position, self.gravity, base_position = base_position)
+            if self.cricket_model == 'hebi_cricket' :
+                self.goal = HebiCricketGoal(joint_position, self.gravity, self.plane_path, base_position = base_position)
+            elif self.cricket_model == 'basic_cricket' :
+                self.goal = CricketGoal(joint_position, self.gravity, self.plane_path, base_position = base_position)
 
     def push_loss(self, loss):
         loss = np.array(loss, dtype=np.float32)

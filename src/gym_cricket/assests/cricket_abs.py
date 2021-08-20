@@ -30,11 +30,11 @@ class Cricket_abs(ABC):
         pass
 
     @abstractmethod
-    def get_normal_forces_limits(self,gravity): #
+    def get_normal_forces_limits(self,gravity):
         pass
 
     @abstractmethod
-    def get_normal_forces(self, planeId : str): #
+    def get_normal_forces(self, planeId : str):
         pass
 
     @abstractmethod

@@ -9,8 +9,7 @@ import time
 from utils.util import get_output_folder
 
 from gym_cricket.envs.cricket_env import CricketEnv
-# from DDPG import DDPG
-from ddpg2 import DDPG
+from ddpg import DDPG
 from neural_network.actor_nn import Actor
 from utils.OUNoise import OUNoise
 from utils.auxiliaryFuncs import init_nn
@@ -22,11 +21,11 @@ if __name__ == "__main__":
     # environment arguments
     parser.add_argument('--mode',           default='train', type=str, help='support option: train/test')
     parser.add_argument('--env',            default='Cricket-v0', type=str, help='open-ai gym environment')
-    parser.add_argument('--num_episodes',   default=100000, type=int, help='total training episodes')
+    parser.add_argument('--num_episodes',   default=10000, type=int, help='total training episodes')
     parser.add_argument('--step_episode',   default=400, type=int, help='simulation steps per episode')
     parser.add_argument('--early_stop',     default=100, type=int, help='change episode after [early_stop] steps with a non-growing reward')
     parser.add_argument('--cricket',        default='basic_cricket', type=str, help='[hebi_cricket, basic_cricket] - cricket urdf model you want to load')
-    parser.add_argument('--terrain',        default='plane', type=int, help='name of the terrain you want to load')
+    parser.add_argument('--terrain',        default='flat', type=str, help='name of the terrain you want to load')
     # reward function
     parser.add_argument('--w_X',            default=0.5, type=float, help='weight X to compute difference between the robot and the optimal position. Used in the reward function')
     parser.add_argument('--w_Y',            default=0.5, type=float, help='weight Y to compute difference between the robot and the optimal position. Used in the reward function')
@@ -83,7 +82,7 @@ if __name__ == "__main__":
 
 
     env = CricketEnv(
-        plane_path=r'src/gym_cricket/assests/terrains/urdfs/' + args.terrain + '.urdf',
+        #plane_path='src/gym_cricket/assests/terrains/' + args.terrain + '.urdf',
         cricket_model = args.cricket)
     noise = OUNoise(env.action_space)
 
@@ -109,8 +108,7 @@ if __name__ == "__main__":
         w_X=args.w_X, w_Y=args.w_X, w_Z=args.w_X,
         w_theta=args.w_theta ,w_sigma=args.w_theta)
 
-    # Set the terrain @TODO read this from a file
-    scene = pw.Wavefront(r'src/gym_cricket/assests/terrains/objs/' + args.terrain + '.obj')
+    scene = pw.Wavefront(r'src/gym_cricket/assests/terrains/' + args.terrain + '.obj')
     terrain = np.array(scene.vertices)
     terrain = np.reshape(terrain, (4,3,1,1,1))
     # terrain = torch.FloatTensor(terrain)
@@ -141,7 +139,7 @@ if __name__ == "__main__":
     output = 'weights_out0'
     output = get_output_folder(output, 'cricket-v0')
 
-    file = open("action_out.txt", "w")
+    # file = open("action_out.txt", "w")
     for episode in range(num_episodes):
         state = env.reset()
         ddpg.reset(state) # new
@@ -149,22 +147,15 @@ if __name__ == "__main__":
         episode_reward = 0
 
         for step in range(step_per_episode):
-            # state = [elem for sub_obs in state for elem in [*sub_obs]] # unpacking the elements from the format returned by cricket env
             action = ddpg.select_action(state) #.get_action(state) # invoke the actor nn to generate an action (compute forward)
-            # print(action)
-            file.write(f'Action {action}\n\n')
-            #action = noise.get_action(action,step)
-            #file.write(f'Action_noise {action}\n\n')
+            # file.write(f'Action {action}\n\n')
 
             reward, new_state, done, info = env.step(action)
             new_state = deepcopy(new_state)
             ddpg.observe(reward,new_state,done)
-            # ddpg.replay_buffer.push(state,action,reward,new_state,done)
 
             if step > args.warmup:
                 ddpg.update_policy()
-            # if len(ddpg.replay_buffer) > batch_size :
-            #     ddpg.update(batch_size)
 
             state = new_state
             episode_reward += reward
@@ -186,7 +177,7 @@ if __name__ == "__main__":
         print()
         
         avg_rewards.append(np.mean(rewards[-10:]))
-    file.close()
+    # file.close()
 
     ddpg.save_model(output) # add read/load directory for the measures of the goal and then use it as a output
     plt.plot(rewards)
