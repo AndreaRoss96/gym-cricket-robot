@@ -10,6 +10,7 @@ from utils.random_process import OrnsteinUhlenbeckProcess
 from utils.util import *
 
 # from ipdb import set_trace as debug
+# https://github.com/cyoon1729/RLcycle/blob/master/rlcycle/ddpg/agent.py
 
 criterion = nn.MSELoss()
 
@@ -64,7 +65,7 @@ class DDPG(object):
         # Sample batch
         state_batch, action_batch, reward_batch, \
         next_state_batch, terminal_batch = self.memory.sample_and_split(self.batch_size)
-        if state_batch.shape == (64,1):
+        if state_batch.shape == (self.batch_size,1):
             tmp = []
             for arr in state_batch:
                 tmp.append(arr[0][0])
@@ -75,7 +76,6 @@ class DDPG(object):
             self.terrain[0],
             self.actor_target(to_tensor(next_state_batch, volatile=True),self.terrain[0])
         )
-        next_q_values.volatile=False
 
         target_q_batch = to_tensor(reward_batch) + \
             self.discount*to_tensor(terminal_batch.astype(np.float))*next_q_values

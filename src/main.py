@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
@@ -50,10 +51,10 @@ if __name__ == "__main__":
     parser.add_argument('--kernel_size3',   default=0, type=int, help='num of third kernel for cnn')
     parser.add_argument('--kernel_size4',   default=0, type=int, help='num of fourth kernel for cnn')
     # ddpg arguments
-    parser.add_argument('--bsize',          default=128, type=int, help='minibatch size')
+    parser.add_argument('--bsize',          default=64, type=int, help='minibatch size')
     parser.add_argument('--rate',           default=0.001, type=float, help='learning rate')
     parser.add_argument('--prate',          default=0.0001, type=float, help='policy net learning rate (only for DDPG)')
-    parser.add_argument('--warmup',         default=100, type=int, help='time without training but only filling the replay memory')
+    parser.add_argument('--warmup',         default=0, type=int, help='time without training but only filling the replay memory')
     parser.add_argument('--discount',       default=0.99, type=float, help='')
     parser.add_argument('--rmsize',         default=6000000, type=int, help='memory size')
     parser.add_argument('--window_length',  default=1, type=int, help='')
@@ -88,7 +89,6 @@ if __name__ == "__main__":
 
     num_episodes = args.num_episodes
     step_per_episode = args.step_episode
-    batch_size = 128
     rewards = []
     avg_rewards = []
 
@@ -108,7 +108,8 @@ if __name__ == "__main__":
         w_X=args.w_X, w_Y=args.w_X, w_Z=args.w_X,
         w_theta=args.w_theta ,w_sigma=args.w_theta)
 
-    scene = pw.Wavefront(r'src/gym_cricket/assests/terrains/' + args.terrain + '.obj')
+    f_name = os.path.join(os.path.dirname(__file__), 'gym_cricket/assests/terrains/' + args.terrain + '.obj')
+    scene = pw.Wavefront(f_name)
     terrain = np.array(scene.vertices)
     terrain = np.reshape(terrain, (4,3,1,1,1))
     # terrain = torch.FloatTensor(terrain)
@@ -154,9 +155,6 @@ if __name__ == "__main__":
             new_state = deepcopy(new_state)
             ddpg.observe(reward,new_state,done)
 
-            if step > args.warmup:
-                ddpg.update_policy()
-
             state = new_state
             episode_reward += reward
 
@@ -164,8 +162,12 @@ if __name__ == "__main__":
                 print('!'*80)
                 break
 
+        if episode > args.warmup:
+            ddpg.update_policy()
+
         if episode % int(num_episodes/3) == 0:
             ddpg.save_model(output)
+            
 
         rewards.append(episode_reward)
         print('_'*40)

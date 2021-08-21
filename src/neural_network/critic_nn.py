@@ -4,8 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules import conv
 
-from ipdb import set_trace as debug
-
 def fanin_init(size, fanin=None):
     fanin = fanin or size[0]
     v = 1. / np.sqrt(fanin)
@@ -90,14 +88,6 @@ class Critic(nn.Module):
         # out = self.layers[-1](out)
         out = self.output_layer(out)
         out = nn.ReLU()(out)
-
-        return out.mean()
-
-    # def cvv_forward(self, data):
-    #     out = self.conv_layers[0](data)
-    #     for layer in self.conv_layers[1:]:
-    #         out = nn.ReLU()(out)
-    #         out = layer(out)
-    #     out = nn.Tanh()(out)
-
-    #     return out
+        out = torch.mean(out, 1)
+        out = torch.reshape(out, (observations.shape[0], 1))
+        return out

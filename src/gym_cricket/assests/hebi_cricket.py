@@ -58,6 +58,7 @@ class HebiCricket(Cricket_abs):
                 self.client
             )
 
+        self.mass = 22.569 * 100 # from kilos to grams
         # Starting velocities 0
         self.track_velocities = np.zeros(self.num_wheel)
         self.limb_velocities = np.zeros(len(self.limb_positions))
@@ -159,10 +160,9 @@ class HebiCricket(Cricket_abs):
                 res.append(position%np.pi)
         return res
 
-    def get_normal_forces_limits(self, gravity):
-        mass = 22.569 * 100 # from kilos to grams
-        max_nf, min_nf = np.full((self.n_normal_f,),mass*gravity), np.zeros((self.n_normal_f))
-        return max_nf,min_nf
+    # def get_normal_forces_limits(self, gravity):
+    #     max_nf, min_nf = np.full((self.n_normal_f,),self.mass*gravity), np.zeros((self.n_normal_f))
+    #     return max_nf,min_nf
 
     def get_normal_forces(self, planeId : str):
         """Get all the normal forces between the robot and palneId

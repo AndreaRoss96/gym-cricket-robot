@@ -80,19 +80,7 @@ class Cricket_abs(ABC):
             self.limb_ids, self.fixed_ids
 
     def get_joint_positions(self):
-        """
-         - getJointState(robot_id, jointIndex)
-        [*jointPosition*, jointVelocity, jointReactionForces, appliedJointMotorTorque]
-        """
-        track_pos = [p.getJointState(self.cricket, wheel[0], physicsClientId=self.client)[0] # wheel[0] gets the jointIndex
-            for track in self.track_joints for wheel in track]
-        track_pos = self.__normalize(track_pos)
-
-        limb_pos = [p.getJointState(self.cricket, joint[0], physicsClientId=self.client)[0]
-            for joint in self.limb_joints]
-        limb_pos = self.__normalize(limb_pos)
-        # should I return two dictionaries? --> dict(zip(list1,list2))
-        return track_pos, limb_pos
+        pass
     
     def get_joint_velocities(self):
         track_vel = [p.getJointState(self.cricket, wheel[0])[1]
@@ -120,6 +108,10 @@ class Cricket_abs(ABC):
         high_lim = np.full((dim,), np.pi)
         low_lim = -high_lim
         return high_lim,low_lim
+    
+    def get_normal_forces_limits(self, gravity):
+        max_nf, min_nf = np.full((self.n_normal_f,),self.mass*gravity), np.zeros((self.n_normal_f))
+        return max_nf,min_nf
 
     def print_info(self):
         '''

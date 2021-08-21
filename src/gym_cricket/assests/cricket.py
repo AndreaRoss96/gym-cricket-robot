@@ -2,8 +2,9 @@ from numpy.core.defchararray import join
 import pybullet as p
 import numpy as np
 import os
+from gym_cricket.assests.cricket_abs import Cricket_abs
 
-class Cricket:
+class Cricket(Cricket_abs):
     def __init__(self, client, strating_position=[], base_position = [0,0,0.5], normal_forces = 4) -> None:
         """
         Input:
@@ -56,6 +57,7 @@ class Cricket:
                 self.client
             )
 
+        self.mass = 100
         # Starting velocities 0
         self.track_velocities = np.zeros(self.num_wheel)
         self.limb_velocities = np.zeros(len(self.limb_positions))
@@ -78,9 +80,9 @@ class Cricket:
             obs = p.getOverlappingObjects(aa, bb, self.client)
             self.collision_safe.update({i : sorted(obs)})
     
-    def set_joint_position(self, positions):
-        for i in range(p.getNumJoints(self.cricket)):
-            p.resetJointState(self.cricket, i, positions[i], physicsClientId = self.client)
+    # def set_joint_position(self, positions):
+    #     for i in range(p.getNumJoints(self.cricket)):
+    #         p.resetJointState(self.cricket, i, positions[i], physicsClientId = self.client)
 
 
     def perform_action(self, action):
@@ -125,39 +127,39 @@ class Cricket:
             physicsClientId = self.client
             )
 
-    def get_observations(self):
-        '''Return:
-            - position (x,y,z)
-            - orientation (roll around X, pitch around Y, yaw around Z)
-            - velocity (two 3 values vetors: linear velocity [x,y,z], angular velocity [ωx,ωy,ωz])
-           of the robot in the simulation'''
-        pos, ang = p.getBasePositionAndOrientation(self.cricket, self.client)
+    # def get_observations(self):
+    #     '''Return:
+    #         - position (x,y,z)
+    #         - orientation (roll around X, pitch around Y, yaw around Z)
+    #         - velocity (two 3 values vetors: linear velocity [x,y,z], angular velocity [ωx,ωy,ωz])
+    #        of the robot in the simulation'''
+    #     pos, ang = p.getBasePositionAndOrientation(self.cricket, self.client)
 
-        # convert the quaternion (δ,Θ,ψ,ω) to Euler (δ,Θ,ψ)
-        angs = p.getEulerFromQuaternion(ang, physicsClientId=self.client) # roll, pitch, yaw
+    #     # convert the quaternion (δ,Θ,ψ,ω) to Euler (δ,Θ,ψ)
+    #     angs = p.getEulerFromQuaternion(ang, physicsClientId=self.client) # roll, pitch, yaw
 
-        # Get the velocity of the robot
-        l_vel, a_vel = p.getBaseVelocity(self.cricket, self.client) # linear & angular velocity
+    #     # Get the velocity of the robot
+    #     l_vel, a_vel = p.getBaseVelocity(self.cricket, self.client) # linear & angular velocity
 
-        return pos,angs,l_vel,a_vel
+    #     return pos,angs,l_vel,a_vel
 
-    def get_ids(self):
-        '''Return the basic PyBullet information of the robot
+    # def get_ids(self):
+    #     '''Return the basic PyBullet information of the robot
         
-        Return:
-         - ID
-         - Client
-        '''
-        return self.cricket, self.client
+    #     Return:
+    #      - ID
+    #      - Client
+    #     '''
+    #     return self.cricket, self.client
     
-    def get_joint_ids(self):
-        '''Return the joints indexes:
-         - track
-         - limb
-         - fixed
-        '''
-        return self.wheel_ids,\
-            self.limb_ids, self.fixed_ids
+    # def get_joint_ids(self):
+    #     '''Return the joints indexes:
+    #      - track
+    #      - limb
+    #      - fixed
+    #     '''
+    #     return self.wheel_ids,\
+    #         self.limb_ids, self.fixed_ids
 
     def __find_joints(self):
         '''Completes the joints in the cricket robot'''
@@ -211,26 +213,26 @@ class Cricket:
                 res.append(position%np.pi)
         return res
     
-    def get_joint_velocities(self):
-        """
-         - getJointState(robot_id, jointIndex)
-        [jointPosition, *jointVelocity*, jointReactionForces, appliedJointMotorTorque]
-        """
-        track_vel = [p.getJointState(self.cricket, wheel[0])[1]
-            for track in self.track_joints for wheel in track]
-        limb_vel = [p.getJointState(self.cricket, joint[0])[1]
-            for limb in self.limb_joints for joint in limb]
-        return track_vel, limb_vel
+    # def get_joint_velocities(self):
+    #     """
+    #      - getJointState(robot_id, jointIndex)
+    #     [jointPosition, *jointVelocity*, jointReactionForces, appliedJointMotorTorque]
+    #     """
+    #     track_vel = [p.getJointState(self.cricket, wheel[0])[1]
+    #         for track in self.track_joints for wheel in track]
+    #     limb_vel = [p.getJointState(self.cricket, joint[0])[1]
+    #         for limb in self.limb_joints for joint in limb]
+    #     return track_vel, limb_vel
 
-    def get_joint_collisions(self):
-        collision = {}
-        for id in self.limb_ids:
-            aa, bb = p.getAABB(self.cricket,id,self.client) # return the bounding box of the body (-1) starting from the center of mass
-            obs = p.getOverlappingObjects(aa, bb, self.client)
-            safe_obs = self.collision_safe.get(id)
-            if sorted(obs) not in safe_obs :
-                collision.update({id : list(set(obs) - set(safe_obs))})
-        return collision
+    # def get_joint_collisions(self):
+    #     collision = {}
+    #     for id in self.limb_ids:
+    #         aa, bb = p.getAABB(self.cricket,id,self.client) # return the bounding box of the body (-1) starting from the center of mass
+    #         obs = p.getOverlappingObjects(aa, bb, self.client)
+    #         safe_obs = self.collision_safe.get(id)
+    #         if sorted(obs) not in safe_obs :
+    #             collision.update({id : list(set(obs) - set(safe_obs))})
+    #     return collision
 
     def get_normal_forces(self, planeId : str):
         """Get all the normal forces between the robot and palneId
@@ -272,16 +274,16 @@ class Cricket:
         high_lim, low_lim = np.full((self.num_wheel,), np.pi), np.full((self.num_wheel,),-np.pi)
         return high_lim,low_lim
 
-    def get_normal_forces_limits(self,gravity):
-        mass = 10000 # grams --> there's a way to get the mass
-        max_nf, min_nf = np.full((self.n_normal_f,),mass*gravity), np.zeros((self.n_normal_f))
-        return max_nf,min_nf
+    # def get_normal_forces_limits(self,gravity):
+    #     mass = 10000 # grams --> there's a way to get the mass
+    #     max_nf, min_nf = np.full((self.n_normal_f,),mass*gravity), np.zeros((self.n_normal_f))
+    #     return max_nf,min_nf
 
-    def get_action_limits(self):
-        dim = len(self.limb_ids) + len(self.track_joints)
-        high_lim = np.full((dim,), np.pi)
-        low_lim = -high_lim
-        return high_lim,low_lim
+    # def get_action_limits(self):
+    #     dim = len(self.limb_ids) + len(self.track_joints)
+    #     high_lim = np.full((dim,), np.pi)
+    #     low_lim = -high_lim
+    #     return high_lim,low_lim
 
     def get_action_velocities_limits(self):
         dim = len(self.limb_ids) + len(self.track_joints)
@@ -289,30 +291,30 @@ class Cricket:
         low_lim = np.zeros((dim,))
         return high_lim,low_lim
     
-    def print_info(self):
-        '''
-        Prints the main robot characteristics 
-        '''
-        times = 40
-        print('='*times)
-        print(f'ID: {self.cricket}')
-        print(f'clinet: {self.client}')
-        print(f'Body mass: {p.getDynamicsInfo(self.cricket,-1,self.client)}')
-        print('tracks: ')
-        for count, track in enumerate(self.track_joints):
-            print(f'{count} - {track}')
-            print('-'*times)
-        print('_'*times)
-        print('limb joints: ')
-        for count, joint in enumerate(self.limb_joints):
-            print(f'{count} - {joint}')
-            print('-'*times)
-        print('_'*times)
-        print('fixed joints: ')
-        for count, joint in enumerate(self.fixed_joints):
-            print(f'{count} - {joint}')
-            print('-'*times)
-        print('_'*times)
-        print('Link states')
-        print('='*times)
+    # def print_info(self):
+    #     '''
+    #     Prints the main robot characteristics 
+    #     '''
+    #     times = 40
+    #     print('='*times)
+    #     print(f'ID: {self.cricket}')
+    #     print(f'clinet: {self.client}')
+    #     print(f'Body mass: {p.getDynamicsInfo(self.cricket,-1,self.client)}')
+    #     print('tracks: ')
+    #     for count, track in enumerate(self.track_joints):
+    #         print(f'{count} - {track}')
+    #         print('-'*times)
+    #     print('_'*times)
+    #     print('limb joints: ')
+    #     for count, joint in enumerate(self.limb_joints):
+    #         print(f'{count} - {joint}')
+    #         print('-'*times)
+    #     print('_'*times)
+    #     print('fixed joints: ')
+    #     for count, joint in enumerate(self.fixed_joints):
+    #         print(f'{count} - {joint}')
+    #         print('-'*times)
+    #     print('_'*times)
+    #     print('Link states')
+    #     print('='*times)
 
