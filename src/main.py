@@ -22,7 +22,7 @@ if __name__ == "__main__":
     # environment arguments
     parser.add_argument('--mode',           default='train', type=str, help='support option: train/test')
     parser.add_argument('--env',            default='Cricket-v0', type=str, help='open-ai gym environment')
-    parser.add_argument('--num_episodes',   default=10000, type=int, help='total training episodes')
+    parser.add_argument('--num_episodes',   default=100000, type=int, help='total training episodes')
     parser.add_argument('--step_episode',   default=400, type=int, help='simulation steps per episode')
     parser.add_argument('--early_stop',     default=100, type=int, help='change episode after [early_stop] steps with a non-growing reward')
     parser.add_argument('--cricket',        default='basic_cricket', type=str, help='[hebi_cricket, basic_cricket] - cricket urdf model you want to load')
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument('--bsize',          default=64, type=int, help='minibatch size')
     parser.add_argument('--rate',           default=0.001, type=float, help='learning rate')
     parser.add_argument('--prate',          default=0.0001, type=float, help='policy net learning rate (only for DDPG)')
-    parser.add_argument('--warmup',         default=0, type=int, help='time without training but only filling the replay memory')
+    parser.add_argument('--warmup',         default=250, type=int, help='time without training but only filling the replay memory')
     parser.add_argument('--discount',       default=0.99, type=float, help='')
     parser.add_argument('--rmsize',         default=6000000, type=int, help='memory size')
     parser.add_argument('--window_length',  default=1, type=int, help='')
@@ -182,6 +182,12 @@ if __name__ == "__main__":
     # file.close()
 
     ddpg.save_model(output) # add read/load directory for the measures of the goal and then use it as a output
+    file_out = file_ = open(os.path.join(os.path.dirname(__file__), 'out_rew.txt'),'w')
+    print("scrivo")
+    for reward in rewards:
+        print(reward)
+        file_out.write(str(reward) + '\n')
+    file_out.close()
     plt.plot(rewards)
     plt.plot(avg_rewards)
     plt.plot()
