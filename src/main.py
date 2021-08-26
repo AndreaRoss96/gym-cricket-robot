@@ -183,9 +183,7 @@ if __name__ == "__main__":
 
     ddpg.save_model(output) # add read/load directory for the measures of the goal and then use it as a output
     file_out = file_ = open(os.path.join(os.path.dirname(__file__), 'out_rew.txt'),'w')
-    print("scrivo")
     for reward in rewards:
-        print(reward)
         file_out.write(str(reward) + '\n')
     file_out.close()
     plt.plot(rewards)
