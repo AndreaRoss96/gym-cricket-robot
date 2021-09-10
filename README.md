@@ -3,7 +3,7 @@
 The code has been tested on Ubuntu 18.04 with ROS Melodic and the following languages and libraries.
 in the following ReadMe there are some instruction on how to run and test the developped code.
 
-**Structure**
+### Structure
 ```
 ├───res
 │       ...
@@ -66,12 +66,12 @@ in the following ReadMe there are some instruction on how to run and test the de
 
 
 ## Requirements
-<b>Languages:</b>
+### Languages:
  
 * python 3.6.4 or newer
 * C++ (to compile HEBI robotics packages if needed)
 
-<b>Libraries (not std)</b>
+### Libraries (not std)
  * gym
  * pybullet
  * numpy
@@ -85,8 +85,8 @@ in the following ReadMe there are some instruction on how to run and test the de
 ## How to run
 run ```python main.py``` (the ```python``` command might change based on your version and the number of python versions installed)
 
-**Flags:**
-**Environment arguments**
+### Flags:
+#### Environment arguments
  
  * ```--mode``` support option: train/test
  * ```--env``` open-ai gym environment
@@ -96,18 +96,18 @@ run ```python main.py``` (the ```python``` command might change based on your ve
  * ```--cricket``` [hebi_cricket, basic_cricket] - cricket urdf model you want to load
  * ```--terrain``` name of the terrain you want to load (to be implemented)
 
-**Reward function**
+#### Reward function
 
 
- * ```--w_X``` weight X to compute difference between the robot and the optimal position. Used in the reward function
- * ```--w_Y``` weight Y to compute difference between the robot and the optimal position. Used in the reward function
- * ```--w_Z``` weight Z to compute difference between the robot and the optimal position. Used in the reward function
- * ```--w_theta``` weight theta to compute difference between the robot and the optimal position. Used in the reward function
- * ```--w_sigma``` weight sigma to compute difference between the robot and the optimal position. Used in the reward function
- * ```--disct_factor``` discount factor for learnin in the reward function
+ * ```--w_X``` weight X to compute difference between the robot and the optimal position.
+ * ```--w_Y``` weight Y to compute difference between the robot and the optimal position. 
+ * ```--w_Z``` weight Z to compute difference between the robot and the optimal position. 
+ * ```--w_theta``` weight theta to compute difference between the robot and the optimal position.
+ * ```--w_sigma``` weight sigma to compute difference between the robot and the optimal position.
+ * ```--disct_factor``` discount factor for learning in the reward function
  * ```--w_joints``` weight to punish bad joints behaviours in the reward function
 
- **Neural networks**
+ #### Neural networks
  
  * ```--hidden1``` hidden num of first fully connect layer
  * ```--hidden2``` hidden num of second fully connect layer
@@ -125,7 +125,7 @@ run ```python main.py``` (the ```python``` command might change based on your ve
  * ```--kernel_size4``` num of fourth kernel for cnn
 
 
- **Ddpg arguments**
+ #### Ddpg arguments
  
  
  * ```--bsize```   minibatch size
@@ -141,7 +141,7 @@ run ```python main.py``` (the ```python``` command might change based on your ve
 * ```--ou_mu``` noise mu 
 
 
-**To be optimized**
+#### To be optimized
 
 
 * ```--validate_episodes``` how many episode to perform during validate experiment
