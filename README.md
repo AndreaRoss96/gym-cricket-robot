@@ -1,6 +1,69 @@
 # gym-cricket-robot
 
 The code has been tested on Ubuntu 18.04 with ROS Melodic and the following languages and libraries.
+in the following ReadMe there are some instruction on how to run and test the developped code.
+
+**structure**
+```
+├───res
+│       ...
+└───src
+    │   ddpg.py
+    │   main.py
+    │   out_rew.txt
+    │   setup.py
+    │   test.py
+    │
+    ├───gym_cricket
+    │   │   __init__.py
+    │   │
+    │   ├───assests
+    │   │   │   cricket.py
+    │   │   │   cricketGoal.py
+    │   │   │   cricket_abs.py
+    │   │   │   hebi_cricket.py
+    │   │   │   hebi_cricketGoal.py
+    │   │   │
+    │   │   ├───terrains
+    │   │   │   ├───flat
+    │   │   │   │     ...
+    │   │   │   └───slope
+    │   │   │         ...
+    │   │   └───urdfs
+    │   │       │   cricket_robot.urdf
+    │   │       │   cricket_robot.urdf.xacro
+    │   │       │
+    │   │       └───hebiCricket
+    │   │           ├───CAD
+    │   │           │   ...
+    │   │           ├───MATLAB Code
+    │   │           │   ...
+    │   │           └───ros_packages
+    │   │               ├───hebi_cpp_api_ros_examples
+    │   │               ├───hebi_description
+    │   │               └───hebi_gazebo
+    │   └───envs
+    │           cricket_env.py
+    │           __init__.py
+    │
+    ├───neural_network
+    │       actor_nn.py
+    │       critic_nn.py
+    │
+    ├───utils
+    │       auxiliaryFuncs.py
+    │       buffer.py
+    │       evaluator.py
+    │       memory.py
+    │       OUNoise.py
+    │       random_process.py
+    │       util.py
+    │
+    └───weights_out
+            actor.pkl
+            critic.pkl
+```
+
 
 ## Requirements
 <b>lang</b>
@@ -21,7 +84,7 @@ C++ (to compile HEBI robotics packages if needed)
  * pathlib
  
 ## How to run
-run ```python main.py```
+run ```python main.py``` (the ```python``` command might change based on your version and the number of python versions installed)
 
 **flags:**
 **environment arguments**
@@ -32,7 +95,7 @@ run ```python main.py```
  * ```--step_episode``` simulation steps per episode
  * ```--early_stop``` change episode after [early_stop] steps with a non-growing reward
  * ```--cricket``` [hebi_cricket, basic_cricket] - cricket urdf model you want to load
- * ```--terrain``` name of the terrain you want to load 
+ * ```--terrain``` name of the terrain you want to load (to be implemented)
 
 **reward function**
 
@@ -92,4 +155,19 @@ run ```python main.py```
 * ```--epsilon```    
 * ```--seed```       
 * ```--resume``` 
-      
+     
+## How to change terrain
+The flat terrain is the flag ```terrain``` default value. To use another terrain you need to put the files required (*.mtl, *.obj, *.urdf) insede a folder with the same name of the terrai, under the subfolder ```src/gym_cricket/assests/terrains/```
+
+e.g.
+I want to use a new terrain named "slope"
+* I create a new folder under ```src/gym_cricket/assests/terrains/``` named ```slope```
+* I put all the useful files inside that folder: at least slope.mtl, slope.obj, slope.urdf (and in case other useful files)
+* I run the script with the correct flag ```python main.py --terrain="slope"```
+
+
+## How to customize the neural networks
+
+
+
+
