@@ -3,7 +3,7 @@
 The code has been tested on Ubuntu 18.04 with ROS Melodic and the following languages and libraries.
 in the following ReadMe there are some instruction on how to run and test the developped code.
 
-**structure**
+**Structure**
 ```
 ├───res
 │       ...
@@ -86,8 +86,8 @@ C++ (to compile HEBI robotics packages if needed)
 ## How to run
 run ```python main.py``` (the ```python``` command might change based on your version and the number of python versions installed)
 
-**flags:**
-**environment arguments**
+**Flags:**
+**Environment arguments**
  
  * ```--mode``` support option: train/test
  * ```--env``` open-ai gym environment
@@ -97,7 +97,7 @@ run ```python main.py``` (the ```python``` command might change based on your ve
  * ```--cricket``` [hebi_cricket, basic_cricket] - cricket urdf model you want to load
  * ```--terrain``` name of the terrain you want to load (to be implemented)
 
-**reward function**
+**Reward function**
 
 
  * ```--w_X``` weight X to compute difference between the robot and the optimal position. Used in the reward function
@@ -108,7 +108,7 @@ run ```python main.py``` (the ```python``` command might change based on your ve
  * ```--disct_factor``` discount factor for learnin in the reward function
  * ```--w_joints``` weight to punish bad joints behaviours in the reward function
 
- **neural networks**
+ **Neural networks**
  
  * ```--hidden1``` hidden num of first fully connect layer
  * ```--hidden2``` hidden num of second fully connect layer
@@ -126,7 +126,7 @@ run ```python main.py``` (the ```python``` command might change based on your ve
  * ```--kernel_size4``` num of fourth kernel for cnn
 
 
- **ddpg arguments**
+ **Ddpg arguments**
  
  
  * ```--bsize```   minibatch size
@@ -167,7 +167,9 @@ I want to use a new terrain named "slope"
 
 
 ## How to customize the neural networks
+The default neural networks* are the following:
+* FC 400x300x150 --> it is possible to add layers **up to a total of 5 hidden layers** (by changing the code it is easy to add more)
+* 3D-CNN --> the default three dimensional CNN is very simple composed just by the input layer and a squared kernel 1x1x1. If you want to add more convolutional layer you also need to mind the respective **kernel sizes**. Again the maximum number of hidden layers is 5.
 
-
-
+\* to understand how the neural networks work givea look to the report with the explanation of the algorithm
 
