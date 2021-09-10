@@ -66,13 +66,12 @@ in the following ReadMe there are some instruction on how to run and test the de
 
 
 ## Requirements
-<b>lang</b>
+<b>Languages:</b>
  
-python 3.6.4 or newer
+* python 3.6.4 or newer
+* C++ (to compile HEBI robotics packages if needed)
 
-C++ (to compile HEBI robotics packages if needed)
-
-<b>libraries (not std)</b>
+<b>Libraries (not std)</b>
  * gym
  * pybullet
  * numpy
