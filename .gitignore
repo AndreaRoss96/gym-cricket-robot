@@ -6,6 +6,8 @@ output/*
 weights_out0/*
 weights_out/*
 
+# word's documents
+~$*
 # C extensions
 *.so
 

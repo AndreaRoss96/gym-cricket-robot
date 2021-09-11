@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
 
     env = CricketEnv(
-        #plane_path='src/gym_cricket/assests/terrains/' + args.terrain + '.urdf',
+        #plane_path='src/gym_cricket/assests/terrains/' + args.terrain + '/' + args.terrain + '.urdf',
         cricket_model = args.cricket)
     noise = OUNoise(env.action_space)
 
@@ -108,7 +108,7 @@ if __name__ == "__main__":
         w_X=args.w_X, w_Y=args.w_X, w_Z=args.w_X,
         w_theta=args.w_theta ,w_sigma=args.w_theta)
 
-    f_name = os.path.join(os.path.dirname(__file__), 'gym_cricket/assests/terrains/' + args.terrain + '.obj')
+    f_name = os.path.join(os.path.dirname(__file__), 'gym_cricket/assests/terrains/' + args.terrain + '/' + args.terrain + '.obj')
     scene = pw.Wavefront(f_name)
     terrain = np.array(scene.vertices)
     terrain = np.reshape(terrain, (4,3,1,1,1))
@@ -192,5 +192,4 @@ if __name__ == "__main__":
     plt.xlabel('Episode')
     plt.ylabel('Reward')
     plt.show()
-
-
+ 

@@ -3,7 +3,8 @@
 The code has been tested on Ubuntu 18.04 with ROS Melodic and the following languages and libraries.
 in the following ReadMe there are some instruction on how to run and test the developped code.
 
-### Structure
+## Structure
+
 ```
 ├───res
 │       ...
@@ -170,5 +171,5 @@ The default neural networks* are the following:
 * FC 400x300x150 --> it is possible to add layers **up to a total of 5 hidden layers** (by changing the code it is easy to add more)
 * 3D-CNN --> the default three dimensional CNN is very simple composed just by the input layer and a squared kernel 1x1x1. If you want to add more convolutional layer you also need to mind the respective **kernel sizes**. Again the maximum number of hidden layers is 5.
 
-\* to understand how the neural networks work givea look to the report with the explanation of the algorithm
+\* to understand how the neural networks work give a look to the report with the explanation of the algorithm
 
