@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 output/*
 weights_out0/*
-weights_out/*
+#weights_out/*
 
 # word's documents
 ~$*
